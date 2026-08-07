@@ -1,0 +1,41 @@
+{
+  "name": "copilotkit-mastra-lab",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack -H 0.0.0.0 -p 3100",
+    "build": "next build",
+    "start": "next start -H 0.0.0.0 -p 3100",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ag-ui/client": "0.0.57",
+    "@ag-ui/mastra": "1.1.1",
+    "@ai-sdk/openai": "^2.0.42",
+    "@copilotkit/react-core": "1.66.4",
+    "@copilotkit/runtime": "1.66.4",
+    "@libsql/client": "^0.15.15",
+    "@mastra/core": "1.57.0",
+    "@mastra/libsql": "1.19.0",
+    "@mastra/memory": "1.26.0",
+    "hono": "^4.10.7",
+    "lucide-react": "^0.468.0",
+    "mastra": "1.1.0-alpha.3",
+    "next": "16.1.2",
+    "react": "^19.2.1",
+    "react-dom": "^19.2.1",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "typescript": "^5"
+  },
+  "overrides": {
+    "@ag-ui/client": "0.0.57",
+    "@ag-ui/core": "0.0.57",
+    "@ag-ui/encoder": "0.0.57",
+    "@ag-ui/proto": "0.0.57"
+  }
+}

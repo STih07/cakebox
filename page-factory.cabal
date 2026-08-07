@@ -1,0 +1,53 @@
+cabal-version: 3.0
+name: page-factory
+version: 0.1.0.0
+build-type: Simple
+
+executable page-factory
+  main-is: Main.hs
+  hs-source-dirs: src
+  other-modules:
+      PageFactory.AgUi
+    , PageFactory.AgUi.Events
+    , PageFactory.AgUi.Input
+    , PageFactory.AgUi.Server
+    , PageFactory.AgUi.Sidebar
+    , PageFactory.Ai
+    , PageFactory.Ai.Agent
+    , PageFactory.Ai.AgUiAdapter
+    , PageFactory.Ai.ChatState
+    , PageFactory.Ai.Model
+    , PageFactory.Ai.Provider.Config
+    , PageFactory.Ai.Provider.OpenAICompat
+    , PageFactory.Ai.TraceStore
+    , PageFactory.Ai.Tools.Fragments
+    , PageFactory.App.Routes
+    , PageFactory.App.Server
+    , PageFactory.Clients
+    , PageFactory.Clients.Model
+    , PageFactory.Clients.Store
+    , PageFactory.Clients.Tabs
+    , PageFactory.Clients.Views
+    , PageFactory.Engine
+    , PageFactory.Engine.Assets
+    , PageFactory.Engine.Html
+    , PageFactory.Engine.Http
+    , PageFactory.Engine.Layout
+  default-language: Haskell2010
+  ghc-options: -Wall -O2 -threaded
+  build-depends:
+      aeson
+    , base >=4.17 && <5
+    , bytestring
+    , containers
+    , directory
+    , filepath
+    , http-client
+    , http-client-tls
+    , http-types
+    , sqlite-simple
+    , stm
+    , text
+    , time
+    , wai
+    , warp
