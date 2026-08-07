@@ -136,9 +136,28 @@ indexView clients =
         ( tag "p" [("class", "eyebrow")] (text "Haskell page factory")
             <> tag "h1" [] (text "Клиентские страницы")
             <> tag "p" [] (text "Один рендерер умеет отдавать полный документ напрямую и фрагмент для внешнего контейнера.")
+            <> demoLinks
         )
         <> tag "section" [("class", "grid")] (mconcat (map clientCard clients))
     )
+
+demoLinks :: Html
+demoLinks =
+  tag
+    "nav"
+    [("class", "demo-links"), ("aria-label", "Cakebox demo links")]
+    ( demoLink "/clients/1/overview" "Client page" "Full page fragment navigation"
+        <> demoLink "/clients/1/ai" "AI surface" "State and tool actions"
+        <> demoLink "/clients/1/invoices" "Nested panel" "Swap only one slot"
+        <> demoLink "https://github.com/STih07/cakebox" "GitHub" "Source and article draft"
+    )
+
+demoLink :: String -> String -> String -> Html
+demoLink href label caption =
+  tag
+    "a"
+    [("class", "demo-link"), ("href", href)]
+    (tag "strong" [] (text label) <> tag "span" [] (text caption))
 
 clientCard :: Client -> Html
 clientCard client =

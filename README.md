@@ -2,6 +2,13 @@
 
 Prototype for **Layered HTML**: typed Haskell-rendered page fragments, a tiny browser swap runtime, and an AI agent that can call UI tools.
 
+**Links**
+
+- Live prototype: http://91.98.192.241:8099/
+- GitHub: https://github.com/STih07/cakebox
+- Article draft: [docs/ARTICLE_DRAFT.md](docs/ARTICLE_DRAFT.md)
+- Publish checklist: [docs/PUBLISH_CHECKLIST.md](docs/PUBLISH_CHECKLIST.md)
+
 The goal is small and practical:
 
 ```text
@@ -126,6 +133,29 @@ The browser consumes the same stream and renders:
 - compact tool activity icons;
 - UI actions such as theme changes and navigation;
 - fragment previews when explicitly requested.
+
+## Demo Flow
+
+Try these in the left chat rail:
+
+```text
+Сделай тему спокойной зеленой #2f7d58 через set_theme_color.
+```
+
+```text
+открой страницу клиента 1
+```
+
+```text
+Покажи счета клиента 1 через render_client_fragment.
+```
+
+What to watch:
+
+- the tool icon strip appears before assistant text;
+- `open_client_page` navigates the main surface;
+- `render_client_fragment` renders a preview inside chat;
+- traces land in `var/page-factory.sqlite3`.
 
 ## Module Map
 
