@@ -1,105 +1,157 @@
 # Haskell Page Factory
 
-Prototype for **Layered HTML** / **слоеный HTML**.
+Prototype for **Layered HTML**: typed Haskell-rendered page fragments, a tiny browser swap runtime, and an AI agent that can call UI tools.
 
-> The server renders typed fragments. The browser replaces only the requested layer.
+The goal is small and practical:
 
-Фабрика страниц на Haskell с двумя режимами рендеринга:
-
-- прямой запрос получает полный HTML-документ с контейнером;
-- запрос из контейнера получает только нужный HTML-фрагмент.
-
-HTTP-запуск:
-
-```bash
-page-factory serve
+```text
+Haskell data/state
+  -> typed HTML fragments
+  -> SSE / AG-UI events
+  -> browser layer swap or UI action
+  -> traceable AI tool loop
 ```
 
-Сервис слушает `127.0.0.1:8098`. Наружу его отдает nginx на `:8099`.
+This is not a React app with an AI chat bolted on. The server owns the routes, state, and render contract. The browser is mostly a thin executor.
 
-Прямой запрос:
+## What Works
 
-```bash
-curl http://127.0.0.1:8098/clients/2
+- Full document rendering from Haskell.
+- Fragment rendering for page-level and nested slots.
+- Browser navigation that swaps only the targeted layer.
+- Persistent left-side AI chat.
+- AI tools for:
+  - `set_theme_color`
+  - `open_client_page`
+  - `render_client_fragment`
+  - `update_order_draft`
+- SQLite traces for chat messages, tool planning, tool results, UI actions, and provider errors.
+- A pulled CopilotKit/Mastra reference app for comparison.
+
+## Why
+
+Modern frontend stacks are powerful, but many internal tools do not need a large client-side runtime for every interaction. This prototype asks a narrower question:
+
+> How far can we get if Haskell renders typed HTML fragments, and the browser only swaps the requested layer?
+
+Once AI is added, the same contract becomes useful as a tool boundary:
+
+```text
+user intent
+  -> AI tool call
+  -> Haskell validates/renders/updates
+  -> AG-UI/SSE event
+  -> browser applies the result
 ```
 
-Запрос из контейнера:
+## Performance Snapshot
+
+Measured on the current prototype, local server, August 2026:
+
+| Item | Size / Time |
+| --- | ---: |
+| Haskell source | ~200 KB |
+| Runtime SQLite traces | ~80 KB |
+| Full home HTML | 27.8 KB, gzip ~8.0 KB |
+| Full client HTML | 28.0 KB, gzip ~8.0 KB |
+| Page fragment | 1.25 KB, gzip 574 B |
+| Panel fragment | 399 B, gzip 299 B |
+| Service memory | ~22 MB |
+| Dev binary, unstripped | 90 MB |
+| Stripped binary | 48 MB |
+| Haskell full page via nginx/curl bench | ~14 ms avg |
+| Haskell panel fragment via nginx/curl bench | ~12 ms avg |
+| Direct backend full page single request | ~2.5-4 ms |
+| Direct backend panel fragment single request | ~0.8-3.6 ms |
+
+The `copilotkit-mastra-lab` folder is a reference app and is intentionally not representative of the Haskell runtime size. Its local `node_modules` and `.next` artifacts are ignored by git.
+
+## Run
 
 ```bash
-curl -H 'X-Render-Mode: fragment' http://127.0.0.1:8098/clients/2
+cabal build
+cabal run page-factory -- serve
 ```
 
-Также фрагмент можно запросить через:
+The server listens on:
+
+```text
+127.0.0.1:8098
+```
+
+In the current deployed setup, nginx exposes it on:
+
+```text
+http://91.98.192.241:8099/
+```
+
+## Fragment Requests
+
+Full page:
 
 ```bash
-curl 'http://127.0.0.1:8098/clients/2?fragment=1'
+curl http://127.0.0.1:8098/clients/1/overview
 ```
 
-Вложенный фрагмент второго слоя:
+Page fragment:
 
 ```bash
 curl \
   -H 'X-Render-Mode: fragment' \
-  -H 'X-Render-Target: client-panel' \
-  http://127.0.0.1:8098/clients/2/invoices
+  -H 'X-Requested-With: container' \
+  http://127.0.0.1:8098/clients/1/overview
 ```
 
-AG-UI stream demo:
+Nested panel fragment:
 
 ```bash
-curl -N http://127.0.0.1:8098/ag-ui/runs
+curl \
+  -H 'X-Render-Mode: fragment' \
+  -H 'X-Requested-With: container' \
+  -H 'X-Render-Target: client-panel' \
+  http://127.0.0.1:8098/clients/1/invoices
 ```
 
-AG-UI `RunAgentInput` через POST:
+## AI / AG-UI Endpoint
 
 ```bash
 curl -N -X POST http://127.0.0.1:8098/ag-ui/runs \
   -H 'Content-Type: application/json' \
-  --data '{"threadId":"thread_test","runId":"run_test","messages":[{"role":"user","content":"hello layered html"}]}'
+  --data '{"threadId":"thread_test","runId":"run_test","messages":[{"role":"user","content":"Сделай тему спокойной зеленой #2f7d58 через set_theme_color."}]}'
 ```
 
-В браузере это соответствует переходу:
+The browser consumes the same stream and renders:
+
+- assistant text;
+- compact tool activity icons;
+- UI actions such as theme changes and navigation;
+- fragment previews when explicitly requested.
+
+## Module Map
 
 ```text
-app-container
-  topbar                  остается
-  client-profile <main>   остается
-    tabs                  остаются
-    client-panel          заменяется
+src/PageFactory/
+  AgUi/       AG-UI input, event encoding, HTTP bridge, sidebar component
+  Ai/         agent loop, provider client, chat state, SQLite trace store, tools
+  App/        WAI server and route parsing
+  Clients/    demo domain model, CSV store, typed tabs, views
+  Engine/     tiny HTML DSL, render modes, layout, CSS/JS assets
 ```
 
-Статическая генерация пока сохранена:
+## Current Limits
 
-```bash
-cabal run page-factory -- generate
-```
+- CSS and JS are inline Haskell strings.
+- The HTML DSL is intentionally tiny.
+- Client data is CSV.
+- Fragment targets are still stringly typed at the HTTP boundary.
+- The benchmark harness is simple curl timing, not a rigorous profiler.
+- The AI provider path is OpenAI-compatible but still prototype-grade.
 
-Идея архитектуры:
+## Publish Status
 
-- `src/Main.hs` — CLI entrypoint.
-- `src/PageFactory/App/Server.hs` — WAI app, `serve`, `generate`, response selection.
-- `src/PageFactory/App/Routes.hs` — route parsing.
-- `src/PageFactory/AgUi/Input.hs` — минимальный `RunAgentInput` parser.
-- `src/PageFactory/AgUi/Events.hs` — AG-UI event JSON/SSE encoding.
-- `src/PageFactory/AgUi/Server.hs` — AG-UI HTTP endpoint.
-- `src/PageFactory/Ai/*` — внутренний AI event layer и adapter в AG-UI.
-- `src/PageFactory/Clients.hs` — facade для клиентских модулей.
-- `src/PageFactory/Clients/Model.hs` — client/domain types.
-- `src/PageFactory/Clients/Store.hs` — CSV loading.
-- `src/PageFactory/Clients/Tabs.hs` — tab slugs, labels, paths.
-- `src/PageFactory/Clients/Views.hs` — client/index/panel HTML views.
-- `src/PageFactory/Engine.hs` — facade для движка.
-- `src/PageFactory/Engine/Html.hs` — tiny HTML DSL.
-- `src/PageFactory/Engine/Http.hs` — render mode, target, WAI responses.
-- `src/PageFactory/Engine/Layout.hs` — full document and app shell.
-- `src/PageFactory/Engine/Assets.hs` — inline CSS and browser fragment navigation.
-- встроенный клиентский скрипт перехватывает внутренние ссылки, делает fragment-запрос и заменяет нужный слой с fade/blur переходом.
-- ссылки с `data-fragment-target` заменяют вложенный `[data-fragment-slot]`, например вкладки клиента.
-- `loadClients` пока читает CSV, но его можно заменить на поток из БД.
+This repo is ready for an early public prototype story, not for a packaged Haskell library release yet.
 
-Документы:
+Good public framing:
 
-- `docs/ARCHITECTURE.md`
-- `docs/FRAGMENT_CONTRACT.md`
-- `docs/AG_UI_INTEGRATION.md`
-- `docs/ROADMAP.md`
+> A tiny Haskell experiment in server-rendered UI fragments, AG-UI style streams, and AI tools that mutate real page state instead of hallucinating UI.
+
