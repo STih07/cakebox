@@ -39,6 +39,7 @@ import PageFactory.Engine
   )
 import PageFactory.Trading (aiTradingView)
 import PageFactory.Trading.DataSource (loadTickerQuotes)
+import PageFactory.Trading.State (TradingState, newTradingState, readTradingSymbols)
 import System.Directory (createDirectoryIfMissing)
 import System.FilePath ((</>))
 
@@ -57,25 +58,26 @@ generateStatic = do
 
   putStrLn ("Generated " <> show (length clients + 1) <> " pages into " <> outputDir)
 
-app :: FilePath -> TraceStore -> ChatState -> Application
-app inputPath traceStore chatState req respond = do
+app :: FilePath -> TraceStore -> ChatState -> TradingState -> Application
+app inputPath traceStore chatState tradingState req respond = do
   clients <- loadClients inputPath
-  response <- handleRequest traceStore chatState clients req
+  response <- handleRequest traceStore chatState tradingState clients req
   respond response
 
-handleRequest :: TraceStore -> ChatState -> [Client] -> Request -> IO Response
-handleRequest traceStore chatState clients req =
+handleRequest :: TraceStore -> ChatState -> TradingState -> [Client] -> Request -> IO Response
+handleRequest traceStore chatState tradingState clients req =
   case parseRoute req of
     HealthRoute ->
       pure (plainResponse status200 "ok\n")
     FaviconRoute ->
       pure (plainResponse status204 "")
     AgUiRunRoute ->
-      agUiRunResponse traceStore chatState clients req
+      agUiRunResponse traceStore chatState tradingState clients req
     HomeRoute ->
       pure (htmlResponse status200 (renderFor mode "Фабрика клиентских страниц" (indexView clients)))
     AiTradingRoute -> do
-      quotesResult <- loadTickerQuotes
+      symbols <- readTradingSymbols tradingState
+      quotesResult <- loadTickerQuotes symbols
       pure (htmlResponse status200 (renderFor mode "AI Trading" (aiTradingView quotesResult)))
     ClientRoute wantedId activeTab ->
       case find ((== wantedId) . clientId) clients of
@@ -112,6 +114,7 @@ serve = do
   let host = "127.0.0.1"
   let inputPath = "data/clients.csv"
   chatState <- newChatState
+  tradingState <- newTradingState
   traceStore <- initTraceStore "var/page-factory.sqlite3"
   putStrLn ("Page factory listening on http://" <> host <> ":" <> show port)
-  runSettings (setHost "127.0.0.1" (setPort port defaultSettings)) (app inputPath traceStore chatState)
+  runSettings (setHost "127.0.0.1" (setPort port defaultSettings)) (app inputPath traceStore chatState tradingState)

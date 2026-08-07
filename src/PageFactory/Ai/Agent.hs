@@ -26,9 +26,10 @@ import PageFactory.Ai.Provider.OpenAICompat
 import PageFactory.Ai.TraceStore (TraceStore, recordChatMessage, recordTraceEvent)
 import PageFactory.Ai.Tools.Fragments (ToolExecution (..), executeFragmentTool)
 import PageFactory.Clients (Client)
+import PageFactory.Trading.State (TradingState)
 
-runAgentStream :: TraceStore -> [Client] -> ChatState -> RunAgentInput -> (AgentEvent -> IO ()) -> IO ()
-runAgentStream traceStore clients chatState input emit = do
+runAgentStream :: TraceStore -> [Client] -> TradingState -> ChatState -> RunAgentInput -> (AgentEvent -> IO ()) -> IO ()
+runAgentStream traceStore clients tradingState chatState input emit = do
   recordTraceEvent traceStore threadIdText runIdText "run.start" (object ["messageCount" .= length (inputMessages input)])
   mapM_ recordInputMessage (inputMessages input)
   appendUserMessages chatState threadIdText (inputMessages input)
@@ -95,7 +96,7 @@ runAgentStream traceStore clients chatState input emit = do
     executeTool call = do
       recordTraceEvent traceStore threadIdText runIdText "tool.start" (toolCallTrace call)
       emit (AgentToolStarted (toolCallId call) (toolCallName call))
-      let execution = executeFragmentTool clients call
+      execution <- executeFragmentTool clients tradingState call
       recordTraceEvent
         traceStore
         threadIdText

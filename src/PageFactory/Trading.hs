@@ -1,5 +1,6 @@
 module PageFactory.Trading
   ( aiTradingView
+  , tradingPanel
   ) where
 
 -- AI Trading module. It starts with one tab: tickers.
@@ -30,6 +31,10 @@ tradingTabs =
 
 tickerPanel :: Either String [TickerQuote] -> Html
 tickerPanel quotesResult =
+  tradingPanel quotesResult
+
+tradingPanel :: Either String [TickerQuote] -> Html
+tradingPanel quotesResult =
   tag
     "section"
     [("class", "panel trading-panel"), ("data-fragment-slot", "trading-panel")]

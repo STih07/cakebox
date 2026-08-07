@@ -191,6 +191,7 @@ systemPrompt :: String
 systemPrompt =
   "Ты AI внутри Haskell Layered HTML фабрики. Отвечай кратко и по делу на русском. "
     <> "У тебя есть декларативные runtime tools как в CopilotKit: open_client_page, render_client_fragment, set_theme_color, update_order_draft. "
+    <> "Для AI Trading используй open_trading_tickers, add_trading_ticker, refresh_trading_quotes. "
     <> "Вызывай tool только когда пользователь просит изменить интерфейс, форму, state или открыть сегмент. "
     <> "Если пользователь просит открыть страницу клиента, используй open_client_page, а не render_client_fragment. "
     <> "render_client_fragment используй только когда пользователь просит показать или вставить фрагмент в чате/preview. "
@@ -230,6 +231,9 @@ runtimeTools =
   , renderClientFragmentTool
   , setThemeColorTool
   , updateOrderDraftTool
+  , openTradingTickersTool
+  , addTradingTickerTool
+  , refreshTradingQuotesTool
   ]
 
 openClientPageTool :: Value
@@ -319,6 +323,61 @@ updateOrderDraftTool =
                       , "status" .= object ["type" .= ("string" :: String)]
                       , "note" .= object ["type" .= ("string" :: String)]
                       ]
+                , "additionalProperties" .= False
+                ]
+          ]
+    ]
+
+openTradingTickersTool :: Value
+openTradingTickersTool =
+  object
+    [ "type" .= ("function" :: String)
+    , "function"
+        .= object
+          [ "name" .= ("open_trading_tickers" :: String)
+          , "description" .= ("Open the AI Trading tickers module in the main Haskell page surface." :: String)
+          , "parameters"
+              .= object
+                [ "type" .= ("object" :: String)
+                , "properties" .= object []
+                , "additionalProperties" .= False
+                ]
+          ]
+    ]
+
+addTradingTickerTool :: Value
+addTradingTickerTool =
+  object
+    [ "type" .= ("function" :: String)
+    , "function"
+        .= object
+          [ "name" .= ("add_trading_ticker" :: String)
+          , "description" .= ("Add a ticker symbol to the AI Trading watchlist and re-render the trading panel." :: String)
+          , "parameters"
+              .= object
+                [ "type" .= ("object" :: String)
+                , "properties"
+                    .= object
+                      [ "symbol" .= object ["type" .= ("string" :: String), "description" .= ("Ticker symbol, for example PLTR, AAPL, MSFT." :: String)]
+                      ]
+                , "required" .= (["symbol"] :: [String])
+                , "additionalProperties" .= False
+                ]
+          ]
+    ]
+
+refreshTradingQuotesTool :: Value
+refreshTradingQuotesTool =
+  object
+    [ "type" .= ("function" :: String)
+    , "function"
+        .= object
+          [ "name" .= ("refresh_trading_quotes" :: String)
+          , "description" .= ("Refresh live Alpaca quotes for the current AI Trading watchlist and re-render the trading panel." :: String)
+          , "parameters"
+              .= object
+                [ "type" .= ("object" :: String)
+                , "properties" .= object []
                 , "additionalProperties" .= False
                 ]
           ]

@@ -36,22 +36,14 @@ data TickerQuote = TickerQuote
   }
   deriving (Eq, Show)
 
-watchlist :: [(String, String, String)]
-watchlist =
-  [ ("NVDA", "AI compute", "Momentum")
-  , ("AMD", "Semis", "Watch")
-  , ("TSLA", "Volatility", "Risk")
-  , ("RKLB", "Space beta", "Breakout")
-  ]
-
-loadTickerQuotes :: IO (Either String [TickerQuote])
-loadTickerQuotes = do
+loadTickerQuotes :: [String] -> IO (Either String [TickerQuote])
+loadTickerQuotes symbols = do
   maybeConfig <- alpacaConfig
   case maybeConfig of
     Nothing -> pure (Left "Alpaca env is not configured: ALPACA_API_KEY_ID, ALPACA_API_SECRET_KEY, ALPACA_DATA_URL")
     Just config -> do
-      result <- fetchAlpacaTrades config (map (\(symbol, _, _) -> symbol) watchlist)
-      pure (mergeLive <$> result)
+      result <- fetchAlpacaTrades config symbols
+      pure (mergeLive symbols <$> result)
 
 data AlpacaConfig = AlpacaConfig
   { alpacaKeyId :: String
@@ -111,16 +103,28 @@ fetchAlpacaTrades config symbols = do
   where
     url = alpacaDataUrl config <> "/stocks/trades/latest?symbols=" <> intercalate "," symbols
 
-mergeLive :: Map.Map String AlpacaTrade -> [TickerQuote]
-mergeLive trades =
-  map quoteFor watchlist
+mergeLive :: [String] -> Map.Map String AlpacaTrade -> [TickerQuote]
+mergeLive symbols trades =
+  map quoteFor symbols
   where
-    quoteFor (symbol, theme, label) =
+    quoteFor symbol =
       case Map.lookup symbol trades of
         Just trade ->
-          TickerQuote symbol theme (formatUsd (tradePrice trade)) label True
+          TickerQuote symbol (tickerTheme symbol) (formatUsd (tradePrice trade)) "Live" True
         Nothing ->
-          TickerQuote symbol theme "No trade" label False
+          TickerQuote symbol (tickerTheme symbol) "No trade" "Unavailable" False
+
+tickerTheme :: String -> String
+tickerTheme symbol =
+  case symbol of
+    "NVDA" -> "AI compute"
+    "AMD" -> "Semis"
+    "TSLA" -> "Volatility"
+    "RKLB" -> "Space beta"
+    "PLTR" -> "AI data"
+    "AAPL" -> "Mega cap"
+    "MSFT" -> "Cloud"
+    _ -> "Watchlist"
 
 formatUsd :: Double -> String
 formatUsd value = "$" <> printf "%.2f" value
