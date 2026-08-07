@@ -8,13 +8,6 @@
 
 Prototype for **Layered HTML**: typed Haskell-rendered page fragments, a tiny browser swap runtime, and an AI agent that can call UI tools.
 
-**Links**
-
-- Live prototype: http://91.98.192.241:8099/
-- GitHub: https://github.com/STih07/cakebox
-- Article draft: [docs/ARTICLE_DRAFT.md](docs/ARTICLE_DRAFT.md)
-- Publish checklist: [docs/PUBLISH_CHECKLIST.md](docs/PUBLISH_CHECKLIST.md)
-
 The goal is small and practical:
 
 ```text
@@ -38,6 +31,7 @@ This is not a React app with an AI chat bolted on. The server owns the routes, s
   - `open_client_page`
   - `render_client_fragment`
   - `update_order_draft`
+- An `AI Trading` demo module with a first `Тикеры` tab.
 - SQLite traces for chat messages, tool planning, tool results, UI actions, and provider errors.
 - A pulled CopilotKit/Mastra reference app for comparison.
 

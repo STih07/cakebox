@@ -37,6 +37,7 @@ import PageFactory.Engine
   , text
   , writePage
   )
+import PageFactory.Trading (aiTradingView)
 import System.Directory (createDirectoryIfMissing)
 import System.FilePath ((</>))
 
@@ -72,6 +73,8 @@ handleRequest traceStore chatState clients req =
       agUiRunResponse traceStore chatState clients req
     HomeRoute ->
       pure (htmlResponse status200 (renderFor mode "Фабрика клиентских страниц" (indexView clients)))
+    AiTradingRoute ->
+      pure (htmlResponse status200 (renderFor mode "AI Trading" aiTradingView))
     ClientRoute wantedId activeTab ->
       case find ((== wantedId) . clientId) clients of
         Just client ->

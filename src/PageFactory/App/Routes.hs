@@ -15,6 +15,7 @@ import PageFactory.Clients (ClientTab (..), clientTabFromSlug)
 
 data Route
   = HomeRoute
+  | AiTradingRoute
   | ClientRoute Int ClientTab
   | AgUiRunRoute
   | FaviconRoute
@@ -29,6 +30,8 @@ parseRoute req =
     ["health"] -> HealthRoute
     ["favicon.ico"] -> FaviconRoute
     ["ag-ui", "runs"] -> AgUiRunRoute
+    ["ai-trading"] -> AiTradingRoute
+    ["ai-trading", "tickers"] -> AiTradingRoute
     ["clients"] -> HomeRoute
     ["clients", rawId] ->
       maybe MissingRoute (`ClientRoute` OverviewTab) (readMaybeInt (T.unpack rawId))

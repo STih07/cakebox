@@ -146,10 +146,10 @@ demoLinks =
   tag
     "nav"
     [("class", "demo-links"), ("aria-label", "Cakebox demo links")]
-    ( demoLink "/clients/1/overview" "Client page" "Full page fragment navigation"
+    ( demoLink "/ai-trading/tickers" "AI Trading" "Ticker watchlist module"
+        <> demoLink "/clients/1/overview" "Client page" "Full page fragment navigation"
         <> demoLink "/clients/1/ai" "AI surface" "State and tool actions"
         <> demoLink "/clients/1/invoices" "Nested panel" "Swap only one slot"
-        <> demoLink "https://github.com/STih07/cakebox" "GitHub" "Source and article draft"
     )
 
 demoLink :: String -> String -> String -> Html
