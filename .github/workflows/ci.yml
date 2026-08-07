@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-smoke:
+    name: Build and smoke demo
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Haskell
+        uses: haskell-actions/setup@v2
+        with:
+          ghc-version: "9.6.7"
+          cabal-version: "3.10.3.0"
+
+      - name: Cache Cabal
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cabal/store
+            dist-newstyle
+          key: ${{ runner.os }}-ghc-9.6.7-${{ hashFiles('page-factory.cabal') }}
+          restore-keys: |
+            ${{ runner.os }}-ghc-9.6.7-
+
+      - name: Build
+        run: cabal build
+
+      - name: Start demo server
+        run: |
+          cabal run page-factory -- serve > /tmp/cakebox.log 2>&1 &
+          echo $! > /tmp/cakebox.pid
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8098/health; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/cakebox.log
+          exit 1
+
+      - name: Smoke full page and fragments
+        run: |
+          curl -fsS http://127.0.0.1:8098/ > /tmp/home.html
+          grep -q "Cakebox" /tmp/home.html
+
+          curl -fsS http://127.0.0.1:8098/clients/1/overview > /tmp/client.html
+          grep -q "Alice Carter" /tmp/client.html
+
+          curl -fsS \
+            -H 'X-Render-Mode: fragment' \
+            -H 'X-Requested-With: container' \
+            http://127.0.0.1:8098/clients/1/overview > /tmp/page-fragment.html
+          grep -q 'data-render-part="client-profile"' /tmp/page-fragment.html
+
+          curl -fsS \
+            -H 'X-Render-Mode: fragment' \
+            -H 'X-Requested-With: container' \
+            -H 'X-Render-Target: client-panel' \
+            http://127.0.0.1:8098/clients/1/invoices > /tmp/panel-fragment.html
+          grep -q 'data-fragment-slot="client-panel"' /tmp/panel-fragment.html
+
+      - name: Smoke AG-UI stream without provider key
+        run: |
+          curl -fsS -N -X POST http://127.0.0.1:8098/ag-ui/runs \
+            -H 'Content-Type: application/json' \
+            --data '{"threadId":"ci-smoke","runId":"run_ci_smoke","messages":[{"role":"user","content":"hello"}]}' \
+            > /tmp/ag-ui.sse
+          grep -q 'RUN_STARTED' /tmp/ag-ui.sse
+          grep -q 'RUN_FINISHED' /tmp/ag-ui.sse
+
+      - name: Stop demo server
+        if: always()
+        run: |
+          if [ -f /tmp/cakebox.pid ]; then
+            kill "$(cat /tmp/cakebox.pid)" || true
+          fi

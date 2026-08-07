@@ -1,5 +1,11 @@
 # Cakebox
 
+[![CI](https://github.com/STih07/cakebox/actions/workflows/ci.yml/badge.svg)](https://github.com/STih07/cakebox/actions/workflows/ci.yml)
+[![license MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![GHC 9.6.7](https://img.shields.io/badge/GHC-9.6.7-5e5086.svg)](page-factory.cabal)
+[![AG--UI stream](https://img.shields.io/badge/AG--UI-stream-2f7d58.svg)](docs/AG_UI_INTEGRATION.md)
+[![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+
 Prototype for **Layered HTML**: typed Haskell-rendered page fragments, a tiny browser swap runtime, and an AI agent that can call UI tools.
 
 **Links**
