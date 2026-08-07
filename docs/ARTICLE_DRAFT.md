@@ -1,10 +1,10 @@
-# Layered HTML in Haskell: tiny fragments, AI tools, and a thinner frontend
+# Cakebox: Layered HTML in Haskell with tiny fragments and AI tools
 
 I wanted to test a small idea:
 
 > What if the server owns the UI contract, the browser only swaps named layers, and an AI agent talks to that system through real tools?
 
-The result is a prototype called **Haskell Page Factory**. It is not a framework yet. It is a working experiment: Haskell renders full pages and typed HTML fragments, a tiny browser runtime swaps fragments in place, and an AI agent can call tools that change theme, navigate to client pages, update visible state, or render a fragment preview.
+The result is a prototype called **Cakebox**. It is not a framework yet. It is a working experiment: Haskell renders full pages and typed HTML fragments, a tiny browser runtime swaps fragments in place, and an AI agent can call tools that change theme, navigate to client pages, update visible state, or render a fragment preview.
 
 ## The shape
 
@@ -163,4 +163,3 @@ The next phase is to extract the reusable core:
 - a real domain module beyond demo clients.
 
 For now, the prototype is small enough to understand and real enough to poke.
-

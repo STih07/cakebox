@@ -1,4 +1,4 @@
-# Haskell Page Factory
+# Cakebox
 
 Prototype for **Layered HTML**: typed Haskell-rendered page fragments, a tiny browser swap runtime, and an AI agent that can call UI tools.
 
@@ -64,7 +64,7 @@ Measured on the current prototype, local server, August 2026:
 | Direct backend full page single request | ~2.5-4 ms |
 | Direct backend panel fragment single request | ~0.8-3.6 ms |
 
-The `copilotkit-mastra-lab` folder is a reference app and is intentionally not representative of the Haskell runtime size. Its local `node_modules` and `.next` artifacts are ignored by git.
+The `copilotkit-mastra-lab` folder is a reference app and is intentionally not representative of the Cakebox runtime size. Its local `node_modules` and `.next` artifacts are ignored by git.
 
 ## Run
 
@@ -154,4 +154,3 @@ This repo is ready for an early public prototype story, not for a packaged Haske
 Good public framing:
 
 > A tiny Haskell experiment in server-rendered UI fragments, AG-UI style streams, and AI tools that mutate real page state instead of hallucinating UI.
-

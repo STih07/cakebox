@@ -51,7 +51,7 @@ topbar =
   tag
     "nav"
     [("class", "topbar")]
-    ( tag "a" [("href", "/"), ("class", "brand")] (text "Page Factory")
+    ( tag "a" [("href", "/"), ("class", "brand")] (text "Cakebox")
         <> tag
           "div"
           [("class", "nav-meta")]

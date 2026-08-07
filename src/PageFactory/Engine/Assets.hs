@@ -443,7 +443,7 @@ appScript =
     , "      if (push) window.history.pushState({}, '', url);"
     , "      if (target) syncActiveTabs(url);"
     , "      initAgentPanels(nextPart);"
-    , "      document.title = nextPart.querySelector('h1')?.textContent || document.querySelector('h1')?.textContent || 'Page Factory';"
+    , "      document.title = nextPart.querySelector('h1')?.textContent || document.querySelector('h1')?.textContent || 'Cakebox';"
     , "      if (!target) window.scrollTo({ top: 0, behavior: 'instant' });"
     , "    } finally {"
     , "      container.dataset.loading = 'false';"

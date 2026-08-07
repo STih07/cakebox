@@ -3,11 +3,11 @@
 ## Repository
 
 - Pick a public repo name:
-  - `haskell-page-factory`
+  - `cakebox`
+  - `cakebox-haskell`
   - `layered-html-haskell`
-  - `page-factory`
 - Add a short description:
-  - `Typed Haskell-rendered HTML fragments with an AG-UI style AI tool loop.`
+  - `Cakebox: typed Haskell-rendered HTML fragments with an AG-UI style AI tool loop.`
 - Add topics:
   - `haskell`
   - `server-rendered-html`
@@ -53,7 +53,7 @@ gzip -c /tmp/page-client.html | wc -c
 Suggested title:
 
 ```text
-Layered HTML in Haskell: tiny fragments, AI tools, and a thinner frontend
+Cakebox: Layered HTML in Haskell with tiny fragments and AI tools
 ```
 
 Suggested subtitle:
@@ -96,4 +96,3 @@ Core claims to keep honest:
 
 7. Show fragment preview inside chat.
 8. Show SQLite trace rows for the run.
-
