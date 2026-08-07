@@ -15,6 +15,7 @@ import PageFactory.Clients
   ( Client (..)
   , clientPanel
   , clientTabFromSlug
+  , clientTabPath
   , clientTabTitle
   )
 import PageFactory.Engine.Html (renderHtml)
@@ -89,6 +90,16 @@ instance FromJSON OrderArgs where
 
 executeFragmentTool :: [Client] -> ToolCall -> ToolExecution
 executeFragmentTool clients call
+  | toolCallName call == "open_client_page" =
+      case parseFragmentArgs (toolCallArguments call) of
+        Left err ->
+          failed ("Bad open_client_page arguments: " <> err)
+        Right args ->
+          case (find ((== fragmentClientId args) . clientId) clients, clientTabFromSlug (fragmentTab args)) of
+            (Just client, Just tabName) ->
+              opened client tabName
+            _ ->
+              failed "Client or tab not found"
   | toolCallName call == "render_client_fragment" =
       case parseFragmentArgs (toolCallArguments call) of
         Left err ->
@@ -146,6 +157,36 @@ executeFragmentTool clients call
                       [ "target" .= ("agent-tool-fragment" :: String)
                       , "label" .= label
                       , "html" .= html
+                      ]
+                  )
+                ]
+            }
+
+    opened client tabName =
+      let url = clientTabPath client tabName
+          label = "client " <> show (clientId client) <> " / " <> clientTabTitle tabName
+          finalNote = "OK: Opened client page: " <> label
+       in ToolExecution
+            { toolExecutionResult =
+                ToolResult
+                  { toolResultCallId = toolCallId call
+                  , toolResultName = toolCallName call
+                  , toolResultContent = finalNote
+                  }
+            , toolExecutionEvents =
+                [ ( "ui.action"
+                  , object
+                      [ "action" .= ("navigate" :: String)
+                      , "url" .= url
+                      , "label" .= label
+                      , "note" .= finalNote
+                      ]
+                  )
+                , ( "state.updated"
+                  , object
+                      [ "currentClientId" .= clientId client
+                      , "currentClientTab" .= clientTabTitle tabName
+                      , "note" .= finalNote
                       ]
                   )
                 ]

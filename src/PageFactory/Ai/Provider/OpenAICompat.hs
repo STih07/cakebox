@@ -190,8 +190,10 @@ systemMessage =
 systemPrompt :: String
 systemPrompt =
   "Ты AI внутри Haskell Layered HTML фабрики. Отвечай кратко и по делу на русском. "
-    <> "У тебя есть декларативные runtime tools как в CopilotKit: render_client_fragment, set_theme_color, update_order_draft. "
+    <> "У тебя есть декларативные runtime tools как в CopilotKit: open_client_page, render_client_fragment, set_theme_color, update_order_draft. "
     <> "Вызывай tool только когда пользователь просит изменить интерфейс, форму, state или открыть сегмент. "
+    <> "Если пользователь просит открыть страницу клиента, используй open_client_page, а не render_client_fragment. "
+    <> "render_client_fragment используй только когда пользователь просит показать или вставить фрагмент в чате/preview. "
     <> "Для set_theme_color всегда передавай валидный CSS цвет: rgb(...), hsl(...) или hex. "
     <> "Если пользователь называет цвет словами, сам преобразуй его в подходящий rgb/hex до tool-вызова; не передавай русские названия цветов. "
     <> "Если tool result начинается с OK:, tool сработал успешно; не называй это ошибкой. "
@@ -224,10 +226,33 @@ toolResultMessage result =
 
 runtimeTools :: [Value]
 runtimeTools =
-  [ renderClientFragmentTool
+  [ openClientPageTool
+  , renderClientFragmentTool
   , setThemeColorTool
   , updateOrderDraftTool
   ]
+
+openClientPageTool :: Value
+openClientPageTool =
+  object
+    [ "type" .= ("function" :: String)
+    , "function"
+        .= object
+          [ "name" .= ("open_client_page" :: String)
+          , "description" .= ("Open a client page in the main Haskell page surface using fragment navigation." :: String)
+          , "parameters"
+              .= object
+                [ "type" .= ("object" :: String)
+                , "properties"
+                    .= object
+                      [ "clientId" .= object ["type" .= ("integer" :: String)]
+                      , "tab" .= object ["type" .= ("string" :: String), "enum" .= (["overview", "invoices", "activity", "ai"] :: [String])]
+                      ]
+                , "required" .= (["clientId", "tab"] :: [String])
+                , "additionalProperties" .= False
+                ]
+          ]
+    ]
 
 renderClientFragmentTool :: Value
 renderClientFragmentTool =

@@ -12,7 +12,8 @@ module PageFactory.Ai.TraceStore
 
 import Control.Exception (SomeException, catch)
 import Data.Aeson (Value, encode)
-import qualified Data.ByteString.Lazy.Char8 as LBS
+import qualified Data.Text.Lazy as LazyText
+import qualified Data.Text.Lazy.Encoding as LazyText
 import Database.SQLite.Simple (Connection, Query, execute, execute_, withConnection)
 import System.Directory (createDirectoryIfMissing)
 import System.FilePath (takeDirectory)
@@ -50,7 +51,7 @@ recordTraceEvent store threadId runId eventName payload =
     execute
       conn
       "INSERT INTO trace_events (created_at, thread_id, run_id, event_name, payload_json) VALUES (?, ?, ?, ?, ?)"
-      (show now, threadId, runId, eventName, LBS.unpack (encode payload))
+      (show now, threadId, runId, eventName, LazyText.toStrict (LazyText.decodeUtf8 (encode payload)))
 
 safely :: TraceStore -> (Connection -> IO ()) -> IO ()
 safely (TraceStore path) action =
