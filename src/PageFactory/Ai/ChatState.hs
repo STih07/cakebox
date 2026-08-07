@@ -28,9 +28,13 @@ appendUserMessages :: ChatState -> String -> [RunMessage] -> IO ()
 appendUserMessages (ChatState stateVar) threadId messages =
   atomically $
     modifyTVar' stateVar $
-      Map.insertWith appendChronologically threadId (map toChatMessage messages)
+      Map.alter appendAfterDroppingDanglingUsers threadId
   where
-    appendChronologically newMessages oldMessages = oldMessages <> newMessages
+    appendAfterDroppingDanglingUsers oldMessages =
+      Just (dropTrailingUsers (maybe [] id oldMessages) <> map toChatMessage messages)
+
+    dropTrailingUsers =
+      reverse . dropWhile ((== "user") . chatRole) . reverse
 
     toChatMessage message =
       ChatMessage
