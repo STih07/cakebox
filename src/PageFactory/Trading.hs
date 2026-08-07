@@ -2,12 +2,13 @@ module PageFactory.Trading
   ( aiTradingView
   ) where
 
--- Demo AI Trading module. It starts with one tab: tickers.
+-- AI Trading module. It starts with one tab: tickers.
 
 import PageFactory.Engine (Html, tag, text)
+import PageFactory.Trading.DataSource (TickerQuote (..))
 
-aiTradingView :: Html
-aiTradingView =
+aiTradingView :: Either String [TickerQuote] -> Html
+aiTradingView quotesResult =
   tag
     "main"
     [("class", "shell"), ("data-render-part", "ai-trading")]
@@ -17,7 +18,7 @@ aiTradingView =
             <> tag "p" [] (text "Первый торговый модуль Cakebox: server-rendered watchlist, готовый для агентских actions, сигналов и будущих фрагментов рынка.")
         )
         <> tradingTabs
-        <> tickerPanel
+        <> tickerPanel quotesResult
     )
 
 tradingTabs :: Html
@@ -27,26 +28,37 @@ tradingTabs =
     [("class", "tabs trading-tabs"), ("aria-label", "AI Trading tabs")]
     (tag "a" [("class", "tab active"), ("href", "/ai-trading/tickers")] (text "Тикеры"))
 
-tickerPanel :: Html
-tickerPanel =
+tickerPanel :: Either String [TickerQuote] -> Html
+tickerPanel quotesResult =
   tag
     "section"
     [("class", "panel trading-panel"), ("data-fragment-slot", "trading-panel")]
-    ( tag "div" [("class", "ticker-grid")]
-        ( tickerCard "NVDA" "AI compute" "+2.4%" "Momentum"
-            <> tickerCard "AMD" "Semis" "+1.1%" "Watch"
-            <> tickerCard "TSLA" "Volatility" "-0.7%" "Risk"
-            <> tickerCard "RKLB" "Space beta" "+3.8%" "Breakout"
-        )
+    (case quotesResult of
+      Left message -> tradingError message
+      Right quotes -> tag "div" [("class", "ticker-grid")] (foldMap tickerCard quotes)
     )
 
-tickerCard :: String -> String -> String -> String -> Html
-tickerCard symbol theme move label =
+tickerCard :: TickerQuote -> Html
+tickerCard quote =
   tag
     "article"
     [("class", "ticker-card")]
-    ( tag "span" [("class", "card-id")] (text theme)
-        <> tag "strong" [] (text symbol)
-        <> tag "span" [] (text move)
-        <> tag "em" [("class", "status ok")] (text label)
+    ( tag "span" [("class", "card-id")] (text (quoteTheme quote))
+        <> tag "strong" [] (text (quoteSymbol quote))
+        <> tag "span" [] (text (quotePrice quote))
+        <> tag "em" [("class", statusClass quote)] (text (quoteLabel quote))
+    )
+
+statusClass :: TickerQuote -> String
+statusClass quote
+  | quoteIsLive quote = "status ok"
+  | otherwise = "status debt"
+
+tradingError :: String -> Html
+tradingError message =
+  tag
+    "div"
+    [("class", "trading-error")]
+    ( tag "strong" [] (text "Market data unavailable")
+        <> tag "p" [] (text message)
     )

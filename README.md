@@ -86,6 +86,16 @@ The server listens on:
 127.0.0.1:8098
 ```
 
+`AI Trading` reads live ticker data from Alpaca when these environment variables are present:
+
+```bash
+ALPACA_API_KEY_ID=...
+ALPACA_API_SECRET_KEY=...
+ALPACA_DATA_URL=https://data.alpaca.markets/v2
+```
+
+If the market data env is missing or Alpaca returns an error, the tickers tab renders an explicit error state instead of fake fallback prices.
+
 In the current deployed setup, nginx exposes it on:
 
 ```text

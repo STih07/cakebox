@@ -57,7 +57,7 @@ jobs:
 
           curl -fsS http://127.0.0.1:8098/ai-trading/tickers > /tmp/ai-trading.html
           grep -q "AI Trading" /tmp/ai-trading.html
-          grep -q "NVDA" /tmp/ai-trading.html
+          grep -q "Market data unavailable" /tmp/ai-trading.html
 
           curl -fsS \
             -H 'X-Render-Mode: fragment' \
