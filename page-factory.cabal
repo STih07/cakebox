@@ -40,6 +40,7 @@ executable page-factory
     , PageFactory.Sandbox.Extension
     , PageFactory.Sandbox.Store
     , PageFactory.Sandbox.View
+    , PageFactory.Stories.View
     , PageFactory.Trading.Actions
     , PageFactory.Trading.DataSource
     , PageFactory.Trading.Extension

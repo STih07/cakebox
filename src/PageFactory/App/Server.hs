@@ -41,6 +41,7 @@ import PageFactory.Engine
   )
 import PageFactory.Sandbox.Store (SandboxStore, getSandboxDoc, initSandboxStore, listSandboxDocs)
 import PageFactory.Sandbox.View (sandboxCatalogView, sandboxDocumentView)
+import PageFactory.Stories.View (storyIndexView, storyView)
 import PageFactory.Trading.DataSource (loadTickerQuotes)
 import PageFactory.Trading.State (TradingState, newTradingState, readTradingSymbols)
 import PageFactory.Trading.View (aiTradingView, tickerDetailView)
@@ -102,6 +103,10 @@ handleRequest traceStore chatState tradingState sandboxStore clients req =
           pure (htmlResponse status404 (renderFor mode "Document not found" (notFoundView "Document not found")))
         Just doc ->
           pure (htmlResponse status200 (renderFor mode ("Sandbox " <> slug) (sandboxDocumentView doc)))
+    StoriesRoute ->
+      pure (htmlResponse status200 (renderFor mode "Cakebook" storyIndexView))
+    StoryRoute slug ->
+      pure (htmlResponse status200 (renderFor mode ("Cakebook " <> slug) (storyView slug)))
     ClientRoute wantedId activeTab ->
       case find ((== wantedId) . clientId) clients of
         Just client ->

@@ -148,6 +148,7 @@ demoLinks =
     [("class", "demo-links"), ("aria-label", "Cakebox demo links")]
     ( demoLink "/ai-trading/tickers" "AI Trading" "Ticker watchlist module"
         <> demoLink "/sandbox" "Sandbox" "Markdown document catalog"
+        <> demoLink "/stories" "Cakebook" "Haskell component gallery"
         <> demoLink "/clients/1/overview" "Client page" "Full page fragment navigation"
         <> demoLink "/clients/1/ai" "AI surface" "State and tool actions"
         <> demoLink "/clients/1/invoices" "Nested panel" "Swap only one slot"
