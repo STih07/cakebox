@@ -23,6 +23,8 @@ executable page-factory
     , PageFactory.Ai.Tools.Fragments
     , PageFactory.App.Routes
     , PageFactory.App.Server
+    , PageFactory.Chat.Extension
+    , PageFactory.Chat.Registry
     , PageFactory.Clients
     , PageFactory.Clients.Model
     , PageFactory.Clients.Store
@@ -35,6 +37,7 @@ executable page-factory
     , PageFactory.Engine.Layout
     , PageFactory.Trading.Actions
     , PageFactory.Trading.DataSource
+    , PageFactory.Trading.Extension
     , PageFactory.Trading.State
     , PageFactory.Trading.View
   default-language: Haskell2010

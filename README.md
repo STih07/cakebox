@@ -179,10 +179,13 @@ src/PageFactory/
   AgUi/       AG-UI input, event encoding, HTTP bridge, sidebar component
   Ai/         agent loop, provider client, chat state, SQLite trace store, tools
   App/        WAI server and route parsing
+  Chat/       extension contract and enabled extension registry
   Clients/    demo domain model, CSV store, typed tabs, views
   Engine/     tiny HTML DSL, render modes, layout, CSS/JS assets
-  Trading/    Alpaca data source and backend watchlist state
+  Trading/    Alpaca data source, backend watchlist state, views, and chat extension
 ```
+
+Domain modules can expose chat extensions: prompt context, tool schemas, and tool execution. The agent runtime collects enabled extensions before planning, so feature modules can add capabilities without hard-coding their tools into the provider client.
 
 ## Current Limits
 

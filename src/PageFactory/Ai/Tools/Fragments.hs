@@ -5,12 +5,13 @@ module PageFactory.Ai.Tools.Fragments
   , executeFragmentTool
   ) where
 
--- Local MCP-like fragment and UI action tools. Replace this boundary with real MCP transport later.
+-- Core local tools. Domain extensions plug in through PageFactory.Chat.Extension.
 
 import Data.Aeson (FromJSON (..), Value, eitherDecode, object, withObject, (.:), (.:?), (.=))
 import Data.List (find)
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import PageFactory.Ai.Provider.OpenAICompat (ToolCall (..), ToolResult (..))
+import PageFactory.Chat.Extension (ChatExtension, ExtensionExecution (..), runExtensionTool)
 import PageFactory.Clients
   ( Client (..)
   , clientPanel
@@ -20,8 +21,6 @@ import PageFactory.Clients
   )
 import PageFactory.Engine.Html (renderHtml)
 import PageFactory.Engine (raw, tag, text)
-import PageFactory.Trading.Actions (executeTradingTool)
-import PageFactory.Trading.State (TradingState)
 
 data ToolExecution = ToolExecution
   { toolExecutionResult :: ToolResult
@@ -90,51 +89,55 @@ instance FromJSON OrderArgs where
         <*> value .:? "status"
         <*> value .:? "note"
 
-executeFragmentTool :: [Client] -> TradingState -> ToolCall -> IO ToolExecution
-executeFragmentTool clients tradingState call
-  | Just action <- executeTradingTool tradingState call = do
-      (content, events) <- action
+executeFragmentTool :: [Client] -> [ChatExtension] -> ToolCall -> IO ToolExecution
+executeFragmentTool clients extensions call = do
+  extensionResult <- runExtensionTool extensions call
+  case extensionResult of
+    Just execution ->
       pure
         ToolExecution
           { toolExecutionResult =
               ToolResult
                 { toolResultCallId = toolCallId call
                 , toolResultName = toolCallName call
-                , toolResultContent = content
+                , toolResultContent = extensionExecutionContent execution
                 }
-          , toolExecutionEvents = events
+          , toolExecutionEvents = extensionExecutionEvents execution
           }
-  | toolCallName call == "open_client_page" =
-      case parseFragmentArgs (toolCallArguments call) of
-        Left err ->
-          pure (failed ("Bad open_client_page arguments: " <> err))
-        Right args ->
-          case (find ((== fragmentClientId args) . clientId) clients, clientTabFromSlug (fragmentTab args)) of
-            (Just client, Just tabName) ->
-              pure (opened client tabName)
-            _ ->
-              pure (failed "Client or tab not found")
-  | toolCallName call == "render_client_fragment" =
-      case parseFragmentArgs (toolCallArguments call) of
-        Left err ->
-          pure (failed ("Bad render_client_fragment arguments: " <> err))
-        Right args ->
-          case (find ((== fragmentClientId args) . clientId) clients, clientTabFromSlug (fragmentTab args)) of
-            (Just client, Just tabName) ->
-              pure (rendered client tabName)
-            _ ->
-              pure (failed "Client or tab not found")
-  | toolCallName call == "set_theme_color" =
-      case parseThemeArgs (toolCallArguments call) of
-        Left err -> pure (failed ("Bad set_theme_color arguments: " <> err))
-        Right args -> pure (themeUpdated args)
-  | toolCallName call == "update_order_draft" =
-      case parseOrderArgs (toolCallArguments call) of
-        Left err -> pure (failed ("Bad update_order_draft arguments: " <> err))
-        Right args -> pure (orderUpdated args)
-  | otherwise =
-      pure (failed ("Unknown tool: " <> toolCallName call))
+    Nothing -> executeCoreTool call
   where
+    executeCoreTool currentCall
+      | toolCallName currentCall == "open_client_page" =
+          case parseFragmentArgs (toolCallArguments currentCall) of
+            Left err ->
+              pure (failed ("Bad open_client_page arguments: " <> err))
+            Right args ->
+              case (find ((== fragmentClientId args) . clientId) clients, clientTabFromSlug (fragmentTab args)) of
+                (Just client, Just tabName) ->
+                  pure (opened client tabName)
+                _ ->
+                  pure (failed "Client or tab not found")
+      | toolCallName currentCall == "render_client_fragment" =
+          case parseFragmentArgs (toolCallArguments currentCall) of
+            Left err ->
+              pure (failed ("Bad render_client_fragment arguments: " <> err))
+            Right args ->
+              case (find ((== fragmentClientId args) . clientId) clients, clientTabFromSlug (fragmentTab args)) of
+                (Just client, Just tabName) ->
+                  pure (rendered client tabName)
+                _ ->
+                  pure (failed "Client or tab not found")
+      | toolCallName currentCall == "set_theme_color" =
+          case parseThemeArgs (toolCallArguments currentCall) of
+            Left err -> pure (failed ("Bad set_theme_color arguments: " <> err))
+            Right args -> pure (themeUpdated args)
+      | toolCallName currentCall == "update_order_draft" =
+          case parseOrderArgs (toolCallArguments currentCall) of
+            Left err -> pure (failed ("Bad update_order_draft arguments: " <> err))
+            Right args -> pure (orderUpdated args)
+      | otherwise =
+          pure (failed ("Unknown tool: " <> toolCallName call))
+
     failed message =
       ToolExecution
         { toolExecutionResult =

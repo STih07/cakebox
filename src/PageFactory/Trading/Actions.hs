@@ -2,13 +2,15 @@
 
 module PageFactory.Trading.Actions
   ( executeTradingTool
+  , tradingToolSchemas
   ) where
 
 -- Agent-addressable capabilities exposed by the AI Trading fragment.
 
-import Data.Aeson (FromJSON (..), Value, eitherDecode, object, withObject, (.:), (.=))
+import Data.Aeson (FromJSON (..), eitherDecode, object, withObject, (.:), (.=))
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import PageFactory.Ai.Provider.OpenAICompat (ToolCall (..))
+import PageFactory.Chat.Extension (ExtensionExecution (..), ToolSchema)
 import PageFactory.Engine.Html (renderHtml)
 import PageFactory.Trading.DataSource (loadTickerQuotes)
 import PageFactory.Trading.State (TradingState, addTradingTicker, readTradingSymbols)
@@ -24,30 +26,37 @@ instance FromJSON TradingTickerArgs where
     withObject "TradingTickerArgs" $ \value ->
       TradingTickerArgs <$> value .: "symbol"
 
-executeTradingTool :: TradingState -> ToolCall -> Maybe (IO (String, [(String, Value)]))
+tradingToolSchemas :: [ToolSchema]
+tradingToolSchemas =
+  [ openTradingTickersTool
+  , addTradingTickerTool
+  , refreshTradingQuotesTool
+  ]
+
+executeTradingTool :: TradingState -> ToolCall -> IO (Maybe ExtensionExecution)
 executeTradingTool tradingState call
   | toolCallName call == "open_trading_tickers" =
-      Just (pure openedTradingTickers)
+      Just <$> openedTradingTickers
   | toolCallName call == "refresh_trading_quotes" =
-      Just (refreshTradingPanel "OK: Refreshed AI Trading tickers")
+      Just <$> refreshTradingPanel "OK: Refreshed AI Trading tickers"
   | toolCallName call == "add_trading_ticker" =
-      Just addTicker
+      Just <$> addTicker
   | otherwise =
-      Nothing
+      pure Nothing
   where
     addTicker =
       case parseTradingTickerArgs (toolCallArguments call) of
-        Left err -> pure ("ERROR: Bad add_trading_ticker arguments: " <> err, [])
+        Left err -> pureExecution ("ERROR: Bad add_trading_ticker arguments: " <> err) []
         Right args -> do
           updateResult <- addTradingTicker tradingState (tradingSymbol args)
           case updateResult of
-            Left message -> pure ("ERROR: " <> message, [])
+            Left message -> pureExecution ("ERROR: " <> message) []
             Right _ -> refreshTradingPanel ("OK: Added " <> tradingSymbol args <> " to AI Trading tickers")
 
     openedTradingTickers =
       let finalNote = "OK: Opened AI Trading tickers"
-       in ( finalNote
-          ,
+       in pureExecution
+            finalNote
             [ ( "ui.action"
               , object
                   [ "action" .= ("navigate" :: String)
@@ -64,7 +73,6 @@ executeTradingTool tradingState call
                   ]
               )
             ]
-          )
 
     refreshTradingPanel finalNote = do
       symbols <- readTradingSymbols tradingState
@@ -74,9 +82,8 @@ executeTradingTool tradingState call
             case quotesResult of
               Left message -> "ERROR: " <> message
               Right _ -> finalNote
-      pure
-        ( content
-        ,
+      pureExecution
+        content
           [ ( "fragment.rendered"
             , object
                 [ "target" .= ("trading-panel" :: String)
@@ -89,10 +96,71 @@ executeTradingTool tradingState call
                 [ "tradingSymbols" .= symbols
                 , "note" .= content
                 ]
-            )
+              )
           ]
-        )
+
+    pureExecution content events =
+      pure
+        ExtensionExecution
+          { extensionExecutionContent = content
+          , extensionExecutionEvents = events
+          }
 
 parseTradingTickerArgs :: String -> Either String TradingTickerArgs
 parseTradingTickerArgs =
   eitherDecode . LBS.pack
+
+openTradingTickersTool :: ToolSchema
+openTradingTickersTool =
+  object
+    [ "type" .= ("function" :: String)
+    , "function"
+        .= object
+          [ "name" .= ("open_trading_tickers" :: String)
+          , "description" .= ("Open the AI Trading tickers module in the main Haskell page surface." :: String)
+          , "parameters"
+              .= object
+                [ "type" .= ("object" :: String)
+                , "properties" .= object []
+                , "additionalProperties" .= False
+                ]
+          ]
+    ]
+
+addTradingTickerTool :: ToolSchema
+addTradingTickerTool =
+  object
+    [ "type" .= ("function" :: String)
+    , "function"
+        .= object
+          [ "name" .= ("add_trading_ticker" :: String)
+          , "description" .= ("Add a ticker symbol to the AI Trading watchlist and re-render the trading panel." :: String)
+          , "parameters"
+              .= object
+                [ "type" .= ("object" :: String)
+                , "properties"
+                    .= object
+                      [ "symbol" .= object ["type" .= ("string" :: String), "description" .= ("Ticker symbol, for example PLTR, AAPL, MSFT." :: String)]
+                      ]
+                , "required" .= (["symbol"] :: [String])
+                , "additionalProperties" .= False
+                ]
+          ]
+    ]
+
+refreshTradingQuotesTool :: ToolSchema
+refreshTradingQuotesTool =
+  object
+    [ "type" .= ("function" :: String)
+    , "function"
+        .= object
+          [ "name" .= ("refresh_trading_quotes" :: String)
+          , "description" .= ("Refresh live Alpaca quotes for the current AI Trading watchlist and re-render the trading panel." :: String)
+          , "parameters"
+              .= object
+                [ "type" .= ("object" :: String)
+                , "properties" .= object []
+                , "additionalProperties" .= False
+                ]
+          ]
+    ]

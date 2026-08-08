@@ -6,8 +6,9 @@ module PageFactory.Ai.Agent
 
 -- Agent runner boundary: state, provider calls, fragment tools, and AG-UI events.
 
-import Data.Maybe (fromMaybe)
 import Data.Aeson (object, (.=))
+import Data.Maybe (fromMaybe)
+import Data.List (intercalate)
 import PageFactory.AgUi.Input (RunAgentInput (..), RunMessage (..))
 import PageFactory.Ai.ChatState (ChatState, appendAssistantMessage, appendUserMessages, getThreadMessages)
 import PageFactory.Ai.Model
@@ -25,6 +26,8 @@ import PageFactory.Ai.Provider.OpenAICompat
   )
 import PageFactory.Ai.TraceStore (TraceStore, recordChatMessage, recordTraceEvent)
 import PageFactory.Ai.Tools.Fragments (ToolExecution (..), executeFragmentTool)
+import PageFactory.Chat.Extension (ChatExtension (..))
+import PageFactory.Chat.Registry (enabledExtensions)
 import PageFactory.Clients (Client)
 import PageFactory.Trading.State (TradingState)
 
@@ -36,12 +39,16 @@ runAgentStream traceStore clients tradingState chatState input emit = do
   history <- getThreadMessages chatState threadIdText
   recordTraceEvent traceStore threadIdText runIdText "history.loaded" (object ["messageCount" .= length history])
   config <- loadAiProviderConfig
+  let extensions = enabledExtensions tradingState
+      extensionTools = concatMap extensionToolSchemas extensions
+  extensionContexts <- mapM extensionPromptContext extensions
+  let promptContext = intercalate "\n" extensionContexts
 
   emit (AgentRunStarted threadId runId)
   emit (AgentTextStarted messageId)
 
   toolCalls <-
-    chooseToolCalls config history >>= \result ->
+    chooseToolCalls config promptContext extensionTools history >>= \result ->
       case result of
         Left err -> do
           recordTraceEvent traceStore threadIdText runIdText "tool_planning.error" (object ["error" .= err])
@@ -50,12 +57,13 @@ runAgentStream traceStore clients tradingState chatState input emit = do
           recordTraceEvent traceStore threadIdText runIdText "tool_planning.calls" (object ["calls" .= map toolCallTrace calls])
           pure calls
 
-  executions <- mapM executeTool toolCalls
+  executions <- mapM (executeTool extensions) toolCalls
   let toolResults = map toolExecutionResult executions
 
   streamed <-
     streamChatCompletion
       config
+      promptContext
       history
       toolCalls
       toolResults
@@ -93,10 +101,10 @@ runAgentStream traceStore clients tradingState chatState input emit = do
         , "arguments" .= toolCallArguments call
         ]
 
-    executeTool call = do
+    executeTool extensions call = do
       recordTraceEvent traceStore threadIdText runIdText "tool.start" (toolCallTrace call)
       emit (AgentToolStarted (toolCallId call) (toolCallName call))
-      execution <- executeFragmentTool clients tradingState call
+      execution <- executeFragmentTool clients extensions call
       recordTraceEvent
         traceStore
         threadIdText

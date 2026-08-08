@@ -111,14 +111,14 @@ instance FromJSON ChunkChoice where
         (\deltaObject -> ChunkChoice <$> deltaObject .:? "content")
         deltaValue
 
-chooseToolCalls :: AiProviderConfig -> [ChatMessage] -> IO (Either String [ToolCall])
-chooseToolCalls config messages =
+chooseToolCalls :: AiProviderConfig -> String -> [Value] -> [ChatMessage] -> IO (Either String [ToolCall])
+chooseToolCalls config promptContext extensionTools messages =
   case providerApiKey config of
     Nothing ->
       pure (Left "AI key is not configured")
     Just apiKey -> do
       manager <- newTlsManager
-      request <- buildJsonRequest config apiKey False (toolPlanningPayload config messages)
+      request <- buildJsonRequest config apiKey False (toolPlanningPayload config promptContext extensionTools messages)
       result <- try (httpLbs request manager) :: IO (Either SomeException (Response LBS.ByteString))
       pure $
         case result of
@@ -133,14 +133,14 @@ chooseToolCalls config messages =
   where
     choiceTools (ChatChoice (ChatMessageResponse _ calls)) = calls
 
-streamChatCompletion :: AiProviderConfig -> [ChatMessage] -> [ToolCall] -> [ToolResult] -> (String -> IO ()) -> IO (Either String String)
-streamChatCompletion config messages toolCalls toolResults onDelta =
+streamChatCompletion :: AiProviderConfig -> String -> [ChatMessage] -> [ToolCall] -> [ToolResult] -> (String -> IO ()) -> IO (Either String String)
+streamChatCompletion config promptContext messages toolCalls toolResults onDelta =
   case providerApiKey config of
     Nothing ->
       pure (Left "AI key is not configured")
     Just apiKey -> do
       manager <- newTlsManager
-      request <- buildStreamingRequest config apiKey (streamingPayload config messages toolCalls toolResults)
+      request <- buildStreamingRequest config apiKey (streamingPayload config promptContext messages toolCalls toolResults)
       result <- try (responseOpen request manager) :: IO (Either SomeException (Response BodyReader))
       case result of
         Left err ->
@@ -155,24 +155,24 @@ streamChatCompletion config messages toolCalls toolResults onDelta =
               responseClose response
               pure streamResult
 
-toolPlanningPayload :: AiProviderConfig -> [ChatMessage] -> Value
-toolPlanningPayload config messages =
+toolPlanningPayload :: AiProviderConfig -> String -> [Value] -> [ChatMessage] -> Value
+toolPlanningPayload config promptContext extensionTools messages =
   object
     [ "model" .= providerModel config
     , "stream" .= False
     , "temperature" .= (0 :: Int)
-    , "messages" .= (systemMessage : map chatMessageJson messages)
-    , "tools" .= runtimeTools
+    , "messages" .= (systemMessage promptContext : map chatMessageJson messages)
+    , "tools" .= (runtimeTools <> extensionTools)
     , "tool_choice" .= ("auto" :: String)
     ]
 
-streamingPayload :: AiProviderConfig -> [ChatMessage] -> [ToolCall] -> [ToolResult] -> Value
-streamingPayload config messages toolCalls toolResults =
+streamingPayload :: AiProviderConfig -> String -> [ChatMessage] -> [ToolCall] -> [ToolResult] -> Value
+streamingPayload config promptContext messages toolCalls toolResults =
   object
     [ "model" .= providerModel config
     , "stream" .= True
     , "temperature" .= (0.4 :: Double)
-    , "messages" .= (systemMessage : map chatMessageJson messages <> toolConversation)
+    , "messages" .= (systemMessage promptContext : map chatMessageJson messages <> toolConversation)
     ]
   where
     toolConversation =
@@ -180,18 +180,18 @@ streamingPayload config messages toolCalls toolResults =
         then []
         else [assistantToolMessage toolCalls] <> map toolResultMessage toolResults
 
-systemMessage :: Value
-systemMessage =
+systemMessage :: String -> Value
+systemMessage promptContext =
   object
     [ "role" .= ("system" :: String)
-    , "content" .= systemPrompt
+    , "content" .= systemPrompt promptContext
     ]
 
-systemPrompt :: String
-systemPrompt =
+systemPrompt :: String -> String
+systemPrompt promptContext =
   "Ты AI внутри Haskell Layered HTML фабрики. Отвечай кратко и по делу на русском. "
     <> "У тебя есть декларативные runtime tools как в CopilotKit: open_client_page, render_client_fragment, set_theme_color, update_order_draft. "
-    <> "Для AI Trading используй open_trading_tickers, add_trading_ticker, refresh_trading_quotes. "
+    <> "Установленные chat extensions добавляют свой контекст и tools ниже. "
     <> "Вызывай tool только когда пользователь просит изменить интерфейс, форму, state или открыть сегмент. "
     <> "Если пользователь просит открыть страницу клиента, используй open_client_page, а не render_client_fragment. "
     <> "render_client_fragment используй только когда пользователь просит показать или вставить фрагмент в чате/preview. "
@@ -200,6 +200,8 @@ systemPrompt =
     <> "Если tool result начинается с OK:, tool сработал успешно; не называй это ошибкой. "
     <> "Если tool result начинается с ERROR:, кратко объясни точную ошибку. "
     <> "После tool-вызова объясни только tool results текущего run; не приписывай к ответу старые действия из истории."
+    <> "\n\nChat extension context:\n"
+    <> promptContext
 
 chatMessageJson :: ChatMessage -> Value
 chatMessageJson message =
@@ -231,9 +233,6 @@ runtimeTools =
   , renderClientFragmentTool
   , setThemeColorTool
   , updateOrderDraftTool
-  , openTradingTickersTool
-  , addTradingTickerTool
-  , refreshTradingQuotesTool
   ]
 
 openClientPageTool :: Value
@@ -323,61 +322,6 @@ updateOrderDraftTool =
                       , "status" .= object ["type" .= ("string" :: String)]
                       , "note" .= object ["type" .= ("string" :: String)]
                       ]
-                , "additionalProperties" .= False
-                ]
-          ]
-    ]
-
-openTradingTickersTool :: Value
-openTradingTickersTool =
-  object
-    [ "type" .= ("function" :: String)
-    , "function"
-        .= object
-          [ "name" .= ("open_trading_tickers" :: String)
-          , "description" .= ("Open the AI Trading tickers module in the main Haskell page surface." :: String)
-          , "parameters"
-              .= object
-                [ "type" .= ("object" :: String)
-                , "properties" .= object []
-                , "additionalProperties" .= False
-                ]
-          ]
-    ]
-
-addTradingTickerTool :: Value
-addTradingTickerTool =
-  object
-    [ "type" .= ("function" :: String)
-    , "function"
-        .= object
-          [ "name" .= ("add_trading_ticker" :: String)
-          , "description" .= ("Add a ticker symbol to the AI Trading watchlist and re-render the trading panel." :: String)
-          , "parameters"
-              .= object
-                [ "type" .= ("object" :: String)
-                , "properties"
-                    .= object
-                      [ "symbol" .= object ["type" .= ("string" :: String), "description" .= ("Ticker symbol, for example PLTR, AAPL, MSFT." :: String)]
-                      ]
-                , "required" .= (["symbol"] :: [String])
-                , "additionalProperties" .= False
-                ]
-          ]
-    ]
-
-refreshTradingQuotesTool :: Value
-refreshTradingQuotesTool =
-  object
-    [ "type" .= ("function" :: String)
-    , "function"
-        .= object
-          [ "name" .= ("refresh_trading_quotes" :: String)
-          , "description" .= ("Refresh live Alpaca quotes for the current AI Trading watchlist and re-render the trading panel." :: String)
-          , "parameters"
-              .= object
-                [ "type" .= ("object" :: String)
-                , "properties" .= object []
                 , "additionalProperties" .= False
                 ]
           ]
