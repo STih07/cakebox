@@ -1,5 +1,6 @@
 module PageFactory.Trading.View
   ( aiTradingView
+  , tickerDetailView
   , tradingPanel
   ) where
 
@@ -71,10 +72,16 @@ tickerCard quote =
   tag
     "article"
     [("class", "ticker-card")]
-    ( tag "span" [("class", "card-id")] (text (quoteTheme quote))
-        <> tag "strong" [] (text (quoteSymbol quote))
-        <> tag "span" [] (text (quotePrice quote))
-        <> tag "em" [("class", statusClass quote)] (text (quoteLabel quote))
+    ( tag
+        "a"
+        [ ("class", "ticker-card-link")
+        , ("href", "/ai-trading/tickers/" <> quoteSymbol quote)
+        ]
+        ( tag "span" [("class", "card-id")] (text (quoteTheme quote))
+            <> tag "strong" [] (text (quoteSymbol quote))
+            <> tag "span" [] (text (quotePrice quote))
+            <> tag "em" [("class", statusClass quote)] (text (quoteLabel quote))
+        )
         <> tag
           "button"
           [ ("type", "button")
@@ -85,6 +92,42 @@ tickerCard quote =
           , ("title", "Remove " <> quoteSymbol quote)
           ]
           (text "Remove")
+    )
+
+tickerDetailView :: String -> Either String [TickerQuote] -> Html
+tickerDetailView symbol quotesResult =
+  tag
+    "main"
+    [("class", "shell"), ("data-render-part", "ai-trading-ticker")]
+    ( tag "a" [("class", "back"), ("href", "/ai-trading/tickers")] (text "← Тикеры")
+        <> tag "section" [("class", "profile trading-hero")]
+          ( tag "p" [("class", "eyebrow")] (text "AI Trading")
+              <> tag "h1" [] (text symbol)
+              <> tag "p" [] (text "Большая карточка тикера: live quote из Alpaca, состояние доступности и быстрые действия с watchlist.")
+          )
+        <> tickerDetailPanel symbol quotesResult
+    )
+
+tickerDetailPanel :: String -> Either String [TickerQuote] -> Html
+tickerDetailPanel symbol quotesResult =
+  tag
+    "section"
+    [("class", "panel ticker-detail-panel"), ("data-fragment-slot", "ticker-detail-panel")]
+    (case quotesResult of
+      Left message -> tradingError message
+      Right (quote : _) -> tickerDetailCard quote
+      Right [] -> tradingError ("Ticker " <> symbol <> " returned no quote")
+    )
+
+tickerDetailCard :: TickerQuote -> Html
+tickerDetailCard quote =
+  tag
+    "article"
+    [("class", "ticker-detail-card")]
+    ( tag "span" [("class", "card-id")] (text (quoteTheme quote))
+        <> tag "strong" [] (text (quoteSymbol quote))
+        <> tag "span" [("class", "ticker-detail-price")] (text (quotePrice quote))
+        <> tag "em" [("class", statusClass quote)] (text (quoteLabel quote))
     )
 
 statusClass :: TickerQuote -> String

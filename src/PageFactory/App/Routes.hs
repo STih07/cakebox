@@ -16,6 +16,7 @@ import PageFactory.Clients (ClientTab (..), clientTabFromSlug)
 data Route
   = HomeRoute
   | AiTradingRoute
+  | AiTradingTickerRoute String
   | ClientRoute Int ClientTab
   | AgUiRunRoute
   | ExtensionActionRoute
@@ -34,6 +35,7 @@ parseRoute req =
     ["extensions", "actions"] -> ExtensionActionRoute
     ["ai-trading"] -> AiTradingRoute
     ["ai-trading", "tickers"] -> AiTradingRoute
+    ["ai-trading", "tickers", rawSymbol] -> AiTradingTickerRoute (T.unpack rawSymbol)
     ["clients"] -> HomeRoute
     ["clients", rawId] ->
       maybe MissingRoute (`ClientRoute` OverviewTab) (readMaybeInt (T.unpack rawId))

@@ -8,6 +8,7 @@ module PageFactory.App.Server
 -- WAI application, response selection, static generation, and Warp startup.
 
 import Control.Monad (forM_)
+import Data.Char (isAlphaNum, toUpper)
 import Data.List (find)
 import Network.HTTP.Types (status200, status204, status404)
 import Network.Wai (Application, Request, Response)
@@ -40,7 +41,7 @@ import PageFactory.Engine
   )
 import PageFactory.Trading.DataSource (loadTickerQuotes)
 import PageFactory.Trading.State (TradingState, newTradingState, readTradingSymbols)
-import PageFactory.Trading.View (aiTradingView)
+import PageFactory.Trading.View (aiTradingView, tickerDetailView)
 import System.Directory (createDirectoryIfMissing)
 import System.FilePath ((</>))
 
@@ -82,6 +83,13 @@ handleRequest traceStore chatState tradingState clients req =
       symbols <- readTradingSymbols tradingState
       quotesResult <- loadTickerQuotes symbols
       pure (htmlResponse status200 (renderFor mode "AI Trading" (aiTradingView quotesResult)))
+    AiTradingTickerRoute rawSymbol ->
+      case normalizeTickerSymbol rawSymbol of
+        Nothing ->
+          pure (htmlResponse status404 (renderFor mode "Ticker not found" (notFoundView "Ticker not found")))
+        Just symbol -> do
+          quoteResult <- loadTickerQuotes [symbol]
+          pure (htmlResponse status200 (renderFor mode ("AI Trading " <> symbol) (tickerDetailView symbol quoteResult)))
     ClientRoute wantedId activeTab ->
       case find ((== wantedId) . clientId) clients of
         Just client ->
@@ -98,6 +106,13 @@ renderClientResponse :: RenderMode -> Maybe String -> Client -> ClientTab -> Htm
 renderClientResponse FragmentOnly (Just "client-panel") client activeTab = clientPanel client activeTab
 renderClientResponse mode _ client activeTab =
   renderFor mode ("Клиент " <> clientName client) (clientView client activeTab)
+
+normalizeTickerSymbol :: String -> Maybe String
+normalizeTickerSymbol rawSymbol =
+  let symbol = map toUpper (filter (/= ' ') rawSymbol)
+   in if not (null symbol) && length symbol <= 8 && all isAlphaNum symbol
+        then Just symbol
+        else Nothing
 
 notFoundView :: String -> Html
 notFoundView message =
