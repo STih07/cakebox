@@ -29,6 +29,8 @@ modelBuilderPromptContext store = do
       , "Fragment slot: model-builder-panel"
       , "Purpose: configure entity models. A model can represent anything."
       , "Required model fields: name, color, short description."
+      , "When the user asks for vague style changes like brighter, calmer, warmer, or more modern colors, choose suitable colors yourself and call update_model for the visible models. Do not ask the user to pick exact colors unless they explicitly want to choose."
+      , "update_model is a patch operation: identify the model by slug or current name, and send only fields that should change."
       , "Models: " <> modelList models
       , entityOperationContext "displayed entity models" "/models" "model-builder-panel" ["open_models", "create_model", "update_model", "delete_model", "refresh_models"]
       , "Capabilities: open_models, create_model, update_model, delete_model, refresh_models"
