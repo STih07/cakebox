@@ -13,27 +13,28 @@ import Network.Wai (Request, Response, requestMethod, responseLBS, responseStrea
 import PageFactory.AgUi.Input (RunAgentInput, defaultRunAgentInput)
 import PageFactory.Ai (ChatState, TraceStore, runAgentStream, toAgUiEvent)
 import PageFactory.Clients (Client)
+import PageFactory.Sandbox.Store (SandboxStore)
 import PageFactory.Trading.State (TradingState)
 import PageFactory.AgUi.Events
   ( AgUiEvent
   , encodeSseEvent
   )
 
-agUiRunResponse :: TraceStore -> ChatState -> TradingState -> [Client] -> Request -> IO Response
-agUiRunResponse traceStore chatState tradingState clients req
+agUiRunResponse :: TraceStore -> ChatState -> TradingState -> SandboxStore -> [Client] -> Request -> IO Response
+agUiRunResponse traceStore chatState tradingState sandboxStore clients req
   | requestMethod req == methodGet =
-      pure (streamRun traceStore chatState tradingState clients defaultRunAgentInput)
+      pure (streamRun traceStore chatState tradingState sandboxStore clients defaultRunAgentInput)
   | requestMethod req == methodPost = do
       body <- strictRequestBody req
       pure $
         case eitherDecode body of
-          Right input -> streamRun traceStore chatState tradingState clients input
+          Right input -> streamRun traceStore chatState tradingState sandboxStore clients input
           Left err -> badRequest ("Bad RunAgentInput JSON: " <> err <> "\n")
   | otherwise =
       pure methodNotAllowed
 
-streamRun :: TraceStore -> ChatState -> TradingState -> [Client] -> RunAgentInput -> Response
-streamRun traceStore chatState tradingState clients input =
+streamRun :: TraceStore -> ChatState -> TradingState -> SandboxStore -> [Client] -> RunAgentInput -> Response
+streamRun traceStore chatState tradingState sandboxStore clients input =
   responseStream
     status200
     [ (hContentType, "text/event-stream; charset=utf-8")
@@ -41,7 +42,7 @@ streamRun traceStore chatState tradingState clients input =
     , ("X-Accel-Buffering", "no")
     ]
     $ \send flush -> do
-      runAgentStream traceStore clients tradingState chatState input (sendEvent send flush . toAgUiEvent)
+      runAgentStream traceStore clients tradingState sandboxStore chatState input (sendEvent send flush . toAgUiEvent)
 
 sendEvent :: (Builder.Builder -> IO ()) -> IO () -> AgUiEvent -> IO ()
 sendEvent send flush event = do

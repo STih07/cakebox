@@ -29,17 +29,18 @@ import PageFactory.Ai.Tools.Fragments (ToolExecution (..), executeFragmentTool)
 import PageFactory.Chat.Extension (ChatExtension (..))
 import PageFactory.Chat.Registry (enabledExtensions)
 import PageFactory.Clients (Client)
+import PageFactory.Sandbox.Store (SandboxStore)
 import PageFactory.Trading.State (TradingState)
 
-runAgentStream :: TraceStore -> [Client] -> TradingState -> ChatState -> RunAgentInput -> (AgentEvent -> IO ()) -> IO ()
-runAgentStream traceStore clients tradingState chatState input emit = do
+runAgentStream :: TraceStore -> [Client] -> TradingState -> SandboxStore -> ChatState -> RunAgentInput -> (AgentEvent -> IO ()) -> IO ()
+runAgentStream traceStore clients tradingState sandboxStore chatState input emit = do
   recordTraceEvent traceStore threadIdText runIdText "run.start" (object ["messageCount" .= length (inputMessages input)])
   mapM_ recordInputMessage (inputMessages input)
   appendUserMessages chatState threadIdText (inputMessages input)
   history <- getThreadMessages chatState threadIdText
   recordTraceEvent traceStore threadIdText runIdText "history.loaded" (object ["messageCount" .= length history])
   config <- loadAiProviderConfig
-  let extensions = enabledExtensions tradingState
+  let extensions = enabledExtensions tradingState sandboxStore
       extensionTools = concatMap extensionToolSchemas extensions
   extensionContexts <- mapM extensionPromptContext extensions
   let promptContext = intercalate "\n" extensionContexts

@@ -32,6 +32,7 @@ This is not a React app with an AI chat bolted on. The server owns the routes, s
   - `render_client_fragment`
   - `update_order_draft`
 - An `AI Trading` demo module with a first `Тикеры` tab.
+- A `Sandbox` module: SQLite-backed markdown documents editable by both the user UI and the agent.
 - SQLite traces for chat messages, tool planning, tool results, UI actions, and provider errors.
 - A pulled CopilotKit/Mastra reference app for comparison.
 
@@ -164,6 +165,10 @@ Try these in the left chat rail:
 Открой AI Trading тикеры, добавь PLTR и обнови котировки.
 ```
 
+```text
+Открой Sandbox и создай markdown документ roadmap с коротким планом.
+```
+
 What to watch:
 
 - the tool icon strip appears before assistant text;
@@ -172,6 +177,7 @@ What to watch:
 - `open_trading_tickers`, `add_trading_ticker`, `remove_trading_ticker`, and `refresh_trading_quotes` mutate backend watchlist state and re-render `trading-panel`;
 - screen controls in `trading-panel` call the same extension actions as the agent and apply the same `fragment.rendered` events;
 - ticker cards navigate to detail pages such as `/ai-trading/tickers/NVDA`;
+- `open_sandbox`, `create_sandbox_doc`, `open_sandbox_doc`, and `save_sandbox_doc` use the same action contract as the document forms in `/sandbox`;
 - traces land in `var/page-factory.sqlite3`.
 
 ## Module Map
@@ -184,6 +190,7 @@ src/PageFactory/
   Chat/       extension contract and enabled extension registry
   Clients/    demo domain model, CSV store, typed tabs, views
   Engine/     tiny HTML DSL, render modes, layout, CSS/JS assets
+  Sandbox/    SQLite markdown document store, views, and chat extension
   Trading/    Alpaca data source, backend watchlist state, views, and chat extension
 ```
 

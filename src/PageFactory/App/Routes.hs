@@ -17,6 +17,8 @@ data Route
   = HomeRoute
   | AiTradingRoute
   | AiTradingTickerRoute String
+  | SandboxRoute
+  | SandboxDocumentRoute String
   | ClientRoute Int ClientTab
   | AgUiRunRoute
   | ExtensionActionRoute
@@ -36,6 +38,8 @@ parseRoute req =
     ["ai-trading"] -> AiTradingRoute
     ["ai-trading", "tickers"] -> AiTradingRoute
     ["ai-trading", "tickers", rawSymbol] -> AiTradingTickerRoute (T.unpack rawSymbol)
+    ["sandbox"] -> SandboxRoute
+    ["sandbox", "docs", rawSlug] -> SandboxDocumentRoute (T.unpack rawSlug)
     ["clients"] -> HomeRoute
     ["clients", rawId] ->
       maybe MissingRoute (`ClientRoute` OverviewTab) (readMaybeInt (T.unpack rawId))

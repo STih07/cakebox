@@ -13,6 +13,7 @@ import Network.Wai (Request, Response, requestMethod, responseLBS, strictRequest
 import PageFactory.Ai.Provider.OpenAICompat (ToolCall, mkLocalToolCall)
 import PageFactory.Chat.Extension (ExtensionExecution (..), runExtensionTool)
 import PageFactory.Chat.Registry (enabledExtensions)
+import PageFactory.Sandbox.Store (SandboxStore)
 import PageFactory.Trading.State (TradingState)
 
 data ExtensionActionInput = ExtensionActionInput
@@ -28,8 +29,8 @@ instance FromJSON ExtensionActionInput where
         <$> value .: "action"
         <*> value .:? "arguments" .!= object []
 
-extensionActionResponse :: TradingState -> Request -> IO Response
-extensionActionResponse tradingState req
+extensionActionResponse :: TradingState -> SandboxStore -> Request -> IO Response
+extensionActionResponse tradingState sandboxStore req
   | requestMethod req /= methodPost =
       pure methodNotAllowed
   | otherwise = do
@@ -38,7 +39,7 @@ extensionActionResponse tradingState req
         Left err ->
           pure (jsonResponse status400 (object ["ok" .= False, "error" .= ("Bad action JSON: " <> err)]))
         Right input -> do
-          let extensions = enabledExtensions tradingState
+          let extensions = enabledExtensions tradingState sandboxStore
               toolCall = actionToolCall input
           result <- runExtensionTool extensions toolCall
           pure $

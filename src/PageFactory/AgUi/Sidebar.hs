@@ -36,6 +36,7 @@ globalAgentSidebar =
               [("class", "agent-prompts")]
               ( promptButton "Тема" "Сделай тему спокойной зеленой #2f7d58 через set_theme_color."
                   <> promptButton "Тикеры" "Открой AI Trading тикеры, добавь PLTR и обнови котировки."
+                  <> promptButton "Sandbox" "Открой Sandbox и создай markdown документ ideas с коротким планом."
                   <> promptButton "Заказ" "Заполни заказ для Alice Carter из Germany на сумму 640, статус Needs review через update_order_draft."
                   <> promptButton "Счета" "Покажи счета клиента 1 через render_client_fragment."
               )
