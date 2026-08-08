@@ -12,6 +12,15 @@ globalAgentSidebar =
     "aside"
     [("class", "global-agent-sidebar"), ("data-fragment-slot", "global-agent-sidebar")]
     ( tag
+        "button"
+        [ ("class", "sidebar-tab")
+        , ("type", "button")
+        , ("data-sidebar-toggle", "global-agent-sidebar")
+        , ("aria-label", "Свернуть чат")
+        , ("title", "Свернуть чат")
+        ]
+        (text "‹")
+        <> tag
         "div"
         [ ("class", "agent-panel sidebar-agent-panel")
         , ("data-agent-panel", "global-assistant")
