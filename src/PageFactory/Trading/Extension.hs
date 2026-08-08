@@ -28,5 +28,5 @@ tradingPromptContext tradingState = do
       , "Visible route: /ai-trading/tickers"
       , "Fragment slot: trading-panel"
       , "Watchlist: " <> intercalate ", " symbols
-      , "Capabilities: open_trading_tickers, add_trading_ticker, refresh_trading_quotes"
+      , "Capabilities: open_trading_tickers, add_trading_ticker, remove_trading_ticker, refresh_trading_quotes"
       ]

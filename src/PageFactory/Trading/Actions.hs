@@ -13,7 +13,7 @@ import PageFactory.Ai.Provider.OpenAICompat (ToolCall (..))
 import PageFactory.Chat.Extension (ExtensionExecution (..), ToolSchema)
 import PageFactory.Engine.Html (renderHtml)
 import PageFactory.Trading.DataSource (loadTickerQuotes)
-import PageFactory.Trading.State (TradingState, addTradingTicker, readTradingSymbols)
+import PageFactory.Trading.State (TradingState, addTradingTicker, readTradingSymbols, removeTradingTicker)
 import PageFactory.Trading.View (tradingPanel)
 
 data TradingTickerArgs = TradingTickerArgs
@@ -30,6 +30,7 @@ tradingToolSchemas :: [ToolSchema]
 tradingToolSchemas =
   [ openTradingTickersTool
   , addTradingTickerTool
+  , removeTradingTickerTool
   , refreshTradingQuotesTool
   ]
 
@@ -41,6 +42,8 @@ executeTradingTool tradingState call
       Just <$> refreshTradingPanel "OK: Refreshed AI Trading tickers"
   | toolCallName call == "add_trading_ticker" =
       Just <$> addTicker
+  | toolCallName call == "remove_trading_ticker" =
+      Just <$> removeTicker
   | otherwise =
       pure Nothing
   where
@@ -52,6 +55,15 @@ executeTradingTool tradingState call
           case updateResult of
             Left message -> pureExecution ("ERROR: " <> message) []
             Right _ -> refreshTradingPanel ("OK: Added " <> tradingSymbol args <> " to AI Trading tickers")
+
+    removeTicker =
+      case parseTradingTickerArgs (toolCallArguments call) of
+        Left err -> pureExecution ("ERROR: Bad remove_trading_ticker arguments: " <> err) []
+        Right args -> do
+          updateResult <- removeTradingTicker tradingState (tradingSymbol args)
+          case updateResult of
+            Left message -> pureExecution ("ERROR: " <> message) []
+            Right _ -> refreshTradingPanel ("OK: Removed " <> tradingSymbol args <> " from AI Trading tickers")
 
     openedTradingTickers =
       let finalNote = "OK: Opened AI Trading tickers"
@@ -141,6 +153,27 @@ addTradingTickerTool =
                 , "properties"
                     .= object
                       [ "symbol" .= object ["type" .= ("string" :: String), "description" .= ("Ticker symbol, for example PLTR, AAPL, MSFT." :: String)]
+                      ]
+                , "required" .= (["symbol"] :: [String])
+                , "additionalProperties" .= False
+                ]
+          ]
+    ]
+
+removeTradingTickerTool :: ToolSchema
+removeTradingTickerTool =
+  object
+    [ "type" .= ("function" :: String)
+    , "function"
+        .= object
+          [ "name" .= ("remove_trading_ticker" :: String)
+          , "description" .= ("Remove a ticker symbol from the AI Trading watchlist and re-render the trading panel." :: String)
+          , "parameters"
+              .= object
+                [ "type" .= ("object" :: String)
+                , "properties"
+                    .= object
+                      [ "symbol" .= object ["type" .= ("string" :: String), "description" .= ("Ticker symbol to remove, for example PLTR, AAPL, MSFT." :: String)]
                       ]
                 , "required" .= (["symbol"] :: [String])
                 , "additionalProperties" .= False

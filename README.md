@@ -169,7 +169,7 @@ What to watch:
 - the tool icon strip appears before assistant text;
 - `open_client_page` navigates the main surface;
 - `render_client_fragment` renders a preview inside chat;
-- `open_trading_tickers`, `add_trading_ticker`, and `refresh_trading_quotes` mutate backend watchlist state and re-render `trading-panel`;
+- `open_trading_tickers`, `add_trading_ticker`, `remove_trading_ticker`, and `refresh_trading_quotes` mutate backend watchlist state and re-render `trading-panel`;
 - traces land in `var/page-factory.sqlite3`.
 
 ## Module Map

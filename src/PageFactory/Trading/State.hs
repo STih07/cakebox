@@ -4,6 +4,7 @@ module PageFactory.Trading.State
   , defaultTradingSymbols
   , newTradingState
   , readTradingSymbols
+  , removeTradingTicker
   ) where
 
 -- Small in-memory backend state for the AI Trading module.
@@ -35,6 +36,22 @@ addTradingTicker (TradingState symbolsVar) rawSymbol =
         let nextSymbols = nub (symbols <> [symbol])
         modifyTVar' symbolsVar (const nextSymbols)
         pure (Right nextSymbols)
+
+removeTradingTicker :: TradingState -> String -> IO (Either String [String])
+removeTradingTicker (TradingState symbolsVar) rawSymbol =
+  case normalizeSymbol rawSymbol of
+    Nothing ->
+      pure (Left "Ticker symbol must be 1-8 letters or digits")
+    Just symbol ->
+      atomically $ do
+        symbols <- readTVar symbolsVar
+        if symbol `elem` symbols
+          then do
+            let nextSymbols = filter (/= symbol) symbols
+            modifyTVar' symbolsVar (const nextSymbols)
+            pure (Right nextSymbols)
+          else
+            pure (Left ("Ticker " <> symbol <> " is not in the watchlist"))
 
 normalizeSymbol :: String -> Maybe String
 normalizeSymbol rawSymbol =
