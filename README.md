@@ -170,6 +170,7 @@ What to watch:
 - `open_client_page` navigates the main surface;
 - `render_client_fragment` renders a preview inside chat;
 - `open_trading_tickers`, `add_trading_ticker`, `remove_trading_ticker`, and `refresh_trading_quotes` mutate backend watchlist state and re-render `trading-panel`;
+- screen controls in `trading-panel` call the same extension actions as the agent and apply the same `fragment.rendered` events;
 - traces land in `var/page-factory.sqlite3`.
 
 ## Module Map

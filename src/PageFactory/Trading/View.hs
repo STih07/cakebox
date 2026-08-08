@@ -34,9 +34,36 @@ tradingPanel quotesResult =
   tag
     "section"
     [("class", "panel trading-panel"), ("data-fragment-slot", "trading-panel")]
-    (case quotesResult of
-      Left message -> tradingError message
-      Right quotes -> tag "div" [("class", "ticker-grid")] (foldMap tickerCard quotes)
+    ( tradingControls
+        <> case quotesResult of
+          Left message -> tradingError message
+          Right quotes -> tag "div" [("class", "ticker-grid")] (foldMap tickerCard quotes)
+    )
+
+tradingControls :: Html
+tradingControls =
+  tag
+    "form"
+    [ ("class", "trading-controls")
+    , ("data-extension-action-form", "add_trading_ticker")
+    ]
+    ( tag
+        "input"
+        [ ("name", "symbol")
+        , ("placeholder", "Ticker")
+        , ("autocomplete", "off")
+        , ("aria-label", "Ticker symbol")
+        ]
+        mempty
+        <> tag "button" [("type", "submit")] (text "Add")
+        <> tag
+          "button"
+          [ ("type", "button")
+          , ("data-extension-action", "refresh_trading_quotes")
+          , ("aria-label", "Refresh quotes")
+          , ("title", "Refresh quotes")
+          ]
+          (text "Refresh")
     )
 
 tickerCard :: TickerQuote -> Html
@@ -48,6 +75,16 @@ tickerCard quote =
         <> tag "strong" [] (text (quoteSymbol quote))
         <> tag "span" [] (text (quotePrice quote))
         <> tag "em" [("class", statusClass quote)] (text (quoteLabel quote))
+        <> tag
+          "button"
+          [ ("type", "button")
+          , ("class", "ticker-remove")
+          , ("data-extension-action", "remove_trading_ticker")
+          , ("data-symbol", quoteSymbol quote)
+          , ("aria-label", "Remove " <> quoteSymbol quote)
+          , ("title", "Remove " <> quoteSymbol quote)
+          ]
+          (text "Remove")
     )
 
 statusClass :: TickerQuote -> String

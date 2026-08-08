@@ -23,6 +23,7 @@ executable page-factory
     , PageFactory.Ai.Tools.Fragments
     , PageFactory.App.Routes
     , PageFactory.App.Server
+    , PageFactory.Chat.ActionServer
     , PageFactory.Chat.Extension
     , PageFactory.Chat.Registry
     , PageFactory.Clients

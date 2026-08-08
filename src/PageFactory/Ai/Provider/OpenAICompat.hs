@@ -4,6 +4,7 @@ module PageFactory.Ai.Provider.OpenAICompat
   ( ToolCall (..)
   , ToolResult (..)
   , chooseToolCalls
+  , mkLocalToolCall
   , streamChatCompletion
   ) where
 
@@ -47,6 +48,15 @@ data ToolCall = ToolCall
   , toolCallJson :: Value
   }
   deriving (Eq, Show)
+
+mkLocalToolCall :: String -> String -> String -> ToolCall
+mkLocalToolCall callId name arguments =
+  ToolCall
+    { toolCallId = callId
+    , toolCallName = name
+    , toolCallArguments = arguments
+    , toolCallJson = object ["id" .= callId, "name" .= name]
+    }
 
 data ToolResult = ToolResult
   { toolResultCallId :: String

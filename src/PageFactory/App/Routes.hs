@@ -18,6 +18,7 @@ data Route
   | AiTradingRoute
   | ClientRoute Int ClientTab
   | AgUiRunRoute
+  | ExtensionActionRoute
   | FaviconRoute
   | HealthRoute
   | MissingRoute
@@ -30,6 +31,7 @@ parseRoute req =
     ["health"] -> HealthRoute
     ["favicon.ico"] -> FaviconRoute
     ["ag-ui", "runs"] -> AgUiRunRoute
+    ["extensions", "actions"] -> ExtensionActionRoute
     ["ai-trading"] -> AiTradingRoute
     ["ai-trading", "tickers"] -> AiTradingRoute
     ["clients"] -> HomeRoute

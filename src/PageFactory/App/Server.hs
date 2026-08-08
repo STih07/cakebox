@@ -15,6 +15,7 @@ import Network.Wai.Handler.Warp (defaultSettings, runSettings, setHost, setPort)
 import PageFactory.AgUi (agUiRunResponse)
 import PageFactory.App.Routes (Route (..), parseRoute)
 import PageFactory.Ai (ChatState, TraceStore, initTraceStore, newChatState)
+import PageFactory.Chat.ActionServer (extensionActionResponse)
 import PageFactory.Clients
   ( Client (..)
   , ClientTab (..)
@@ -73,6 +74,8 @@ handleRequest traceStore chatState tradingState clients req =
       pure (plainResponse status204 "")
     AgUiRunRoute ->
       agUiRunResponse traceStore chatState tradingState clients req
+    ExtensionActionRoute ->
+      extensionActionResponse tradingState req
     HomeRoute ->
       pure (htmlResponse status200 (renderFor mode "Фабрика клиентских страниц" (indexView clients)))
     AiTradingRoute -> do
