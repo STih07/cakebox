@@ -46,6 +46,8 @@ sandboxDocumentFragment doc =
               ( tag "a" [("class", "back"), ("href", "/sandbox")] (text "← Документы")
                   <> tag "input" [("class", "sandbox-title-input"), ("name", "title"), ("value", docTitle doc), ("autocomplete", "off"), ("aria-label", "Document title")] mempty
                   <> tag "span" [("class", "sandbox-doc-updated")] (text ("Updated " <> shortDateTime (docUpdatedAt doc)))
+                  <> tag "button" [("type", "button"), ("data-extension-action", "refresh_sandbox_doc"), ("data-slug", docSlug doc)] (text "Refresh")
+                  <> tag "button" [("type", "button"), ("data-extension-action", "delete_sandbox_doc"), ("data-slug", docSlug doc)] (text "Delete")
                   <> tag "button" [("type", "submit")] (text "Save")
               )
             <> tag "div" [("class", "sandbox-workspace")]

@@ -26,6 +26,7 @@ This is not a React app with an AI chat bolted on. The server owns the routes, s
 - Fragment rendering for page-level and nested slots.
 - Browser navigation that swaps only the targeted layer.
 - Persistent left-side AI chat.
+- Shared entity operation helpers for tool schemas, navigation, state updates, and fragment refresh events.
 - AI tools for:
   - `set_theme_color`
   - `open_client_page`

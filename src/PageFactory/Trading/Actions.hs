@@ -7,10 +7,11 @@ module PageFactory.Trading.Actions
 
 -- Agent-addressable capabilities exposed by the AI Trading fragment.
 
-import Data.Aeson (FromJSON (..), eitherDecode, object, withObject, (.:), (.=))
+import Data.Aeson (FromJSON (..), eitherDecode, withObject, (.:), (.=))
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import PageFactory.Ai.Provider.OpenAICompat (ToolCall (..))
 import PageFactory.Chat.Extension (ExtensionExecution (..), ToolSchema)
+import PageFactory.Chat.Operations (OperationArg (..), fragmentRenderedEvent, navigateEvent, operationToolSchema, stateUpdatedEvent)
 import PageFactory.Engine.Html (renderHtml)
 import PageFactory.Trading.DataSource (loadTickerQuotes)
 import PageFactory.Trading.State (TradingState, addTradingTicker, readTradingSymbols, removeTradingTicker)
@@ -69,21 +70,8 @@ executeTradingTool tradingState call
       let finalNote = "OK: Opened AI Trading tickers"
        in pureExecution
             finalNote
-            [ ( "ui.action"
-              , object
-                  [ "action" .= ("navigate" :: String)
-                  , "url" .= ("/ai-trading/tickers" :: String)
-                  , "label" .= ("AI Trading / Тикеры" :: String)
-                  , "note" .= finalNote
-                  ]
-              )
-            , ( "state.updated"
-              , object
-                  [ "currentModule" .= ("AI Trading" :: String)
-                  , "currentTab" .= ("Тикеры" :: String)
-                  , "note" .= finalNote
-                  ]
-              )
+            [ navigateEvent "/ai-trading/tickers" "AI Trading / Тикеры" finalNote
+            , stateUpdatedEvent ["currentModule" .= ("AI Trading" :: String), "currentTab" .= ("Тикеры" :: String), "note" .= finalNote]
             ]
 
     refreshTradingPanel finalNote = do
@@ -96,19 +84,8 @@ executeTradingTool tradingState call
               Right _ -> finalNote
       pureExecution
         content
-          [ ( "fragment.rendered"
-            , object
-                [ "target" .= ("trading-panel" :: String)
-                , "label" .= ("AI Trading / Тикеры" :: String)
-                , "html" .= html
-                ]
-            )
-          , ( "state.updated"
-            , object
-                [ "tradingSymbols" .= symbols
-                , "note" .= content
-                ]
-              )
+          [ fragmentRenderedEvent "trading-panel" "AI Trading / Тикеры" html
+          , stateUpdatedEvent ["tradingSymbols" .= symbols, "note" .= content]
           ]
 
     pureExecution content events =
@@ -124,76 +101,20 @@ parseTradingTickerArgs =
 
 openTradingTickersTool :: ToolSchema
 openTradingTickersTool =
-  object
-    [ "type" .= ("function" :: String)
-    , "function"
-        .= object
-          [ "name" .= ("open_trading_tickers" :: String)
-          , "description" .= ("Open the AI Trading tickers module in the main Haskell page surface." :: String)
-          , "parameters"
-              .= object
-                [ "type" .= ("object" :: String)
-                , "properties" .= object []
-                , "additionalProperties" .= False
-                ]
-          ]
-    ]
+  operationToolSchema "open_trading_tickers" "Open the AI Trading tickers module in the main Haskell page surface." []
 
 addTradingTickerTool :: ToolSchema
 addTradingTickerTool =
-  object
-    [ "type" .= ("function" :: String)
-    , "function"
-        .= object
-          [ "name" .= ("add_trading_ticker" :: String)
-          , "description" .= ("Add a ticker symbol to the AI Trading watchlist and re-render the trading panel." :: String)
-          , "parameters"
-              .= object
-                [ "type" .= ("object" :: String)
-                , "properties"
-                    .= object
-                      [ "symbol" .= object ["type" .= ("string" :: String), "description" .= ("Ticker symbol, for example PLTR, AAPL, MSFT." :: String)]
-                      ]
-                , "required" .= (["symbol"] :: [String])
-                , "additionalProperties" .= False
-                ]
-          ]
-    ]
+  operationToolSchema "add_trading_ticker" "Add a ticker symbol to the displayed AI Trading watchlist and re-render the trading panel." [symbolArg]
 
 removeTradingTickerTool :: ToolSchema
 removeTradingTickerTool =
-  object
-    [ "type" .= ("function" :: String)
-    , "function"
-        .= object
-          [ "name" .= ("remove_trading_ticker" :: String)
-          , "description" .= ("Remove a ticker symbol from the AI Trading watchlist and re-render the trading panel." :: String)
-          , "parameters"
-              .= object
-                [ "type" .= ("object" :: String)
-                , "properties"
-                    .= object
-                      [ "symbol" .= object ["type" .= ("string" :: String), "description" .= ("Ticker symbol to remove, for example PLTR, AAPL, MSFT." :: String)]
-                      ]
-                , "required" .= (["symbol"] :: [String])
-                , "additionalProperties" .= False
-                ]
-          ]
-    ]
+  operationToolSchema "remove_trading_ticker" "Remove a ticker symbol from the displayed AI Trading watchlist and re-render the trading panel." [symbolArg]
 
 refreshTradingQuotesTool :: ToolSchema
 refreshTradingQuotesTool =
-  object
-    [ "type" .= ("function" :: String)
-    , "function"
-        .= object
-          [ "name" .= ("refresh_trading_quotes" :: String)
-          , "description" .= ("Refresh live Alpaca quotes for the current AI Trading watchlist and re-render the trading panel." :: String)
-          , "parameters"
-              .= object
-                [ "type" .= ("object" :: String)
-                , "properties" .= object []
-                , "additionalProperties" .= False
-                ]
-          ]
-    ]
+  operationToolSchema "refresh_trading_quotes" "Refresh the displayed AI Trading ticker fragment from the current backend watchlist." []
+
+symbolArg :: OperationArg
+symbolArg =
+  OperationArg "symbol" "Ticker symbol, for example PLTR, AAPL, MSFT." True

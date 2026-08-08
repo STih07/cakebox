@@ -25,6 +25,7 @@ executable page-factory
     , PageFactory.App.Server
     , PageFactory.Chat.ActionServer
     , PageFactory.Chat.Extension
+    , PageFactory.Chat.Operations
     , PageFactory.Chat.Registry
     , PageFactory.Clients
     , PageFactory.Clients.Model

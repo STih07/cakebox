@@ -4,6 +4,7 @@ module PageFactory.Sandbox.Store
   ( SandboxDoc (..)
   , SandboxDocSummary (..)
   , SandboxStore
+  , deleteSandboxDoc
   , getSandboxDoc
   , initSandboxStore
   , listSandboxDocs
@@ -16,7 +17,7 @@ module PageFactory.Sandbox.Store
 import Data.Char (isAlphaNum, toLower)
 import Data.Maybe (listToMaybe)
 import Data.Time (getCurrentTime)
-import Database.SQLite.Simple (Connection, FromRow (..), Only (..), Query, field, execute, execute_, query, query_, withConnection)
+import Database.SQLite.Simple (Connection, FromRow (..), Only (..), Query, execute, execute_, field, query, query_, withConnection)
 import System.Directory (createDirectoryIfMissing)
 import System.FilePath (takeDirectory)
 
@@ -73,6 +74,19 @@ getSandboxDoc (SandboxStore path) rawSlug =
       withConnection path $ \conn -> do
         rows <- query conn "SELECT slug, title, body, updated_at FROM sandbox_documents WHERE slug = ?" (Only slug)
         pure (listToMaybe rows)
+
+deleteSandboxDoc :: SandboxStore -> String -> IO (Either String String)
+deleteSandboxDoc (SandboxStore path) rawSlug =
+  case normalizeSlug rawSlug of
+    Nothing -> pure (Left "Document slug is invalid")
+    Just slug ->
+      withConnection path $ \conn -> do
+        rows <- query conn "SELECT slug FROM sandbox_documents WHERE slug = ?" (Only slug) :: IO [Only String]
+        case rows of
+          [] -> pure (Left ("Sandbox document not found: " <> slug))
+          _ -> do
+            execute conn "DELETE FROM sandbox_documents WHERE slug = ?" (Only slug)
+            pure (Right slug)
 
 saveSandboxDoc :: SandboxStore -> String -> String -> String -> IO (Either String SandboxDoc)
 saveSandboxDoc (SandboxStore path) rawSlug rawTitle body =

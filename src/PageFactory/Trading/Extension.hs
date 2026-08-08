@@ -6,6 +6,7 @@ module PageFactory.Trading.Extension
 
 import Data.List (intercalate)
 import PageFactory.Chat.Extension (ChatExtension (..))
+import PageFactory.Chat.Operations (entityOperationContext)
 import PageFactory.Trading.Actions (executeTradingTool, tradingToolSchemas)
 import PageFactory.Trading.State (TradingState, readTradingSymbols)
 
@@ -28,5 +29,6 @@ tradingPromptContext tradingState = do
       , "Visible route: /ai-trading/tickers"
       , "Fragment slot: trading-panel"
       , "Watchlist: " <> intercalate ", " symbols
+      , entityOperationContext "displayed tickers" "/ai-trading/tickers" "trading-panel" ["open_trading_tickers", "add_trading_ticker", "remove_trading_ticker", "refresh_trading_quotes"]
       , "Capabilities: open_trading_tickers, add_trading_ticker, remove_trading_ticker, refresh_trading_quotes"
       ]

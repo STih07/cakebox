@@ -5,6 +5,7 @@ module PageFactory.Sandbox.Extension
 -- Chat extension definition for Sandbox markdown documents.
 
 import PageFactory.Chat.Extension (ChatExtension (..))
+import PageFactory.Chat.Operations (entityOperationContext)
 import PageFactory.Sandbox.Actions (executeSandboxTool, sandboxToolSchemas)
 import PageFactory.Sandbox.Store (SandboxDocSummary (..), SandboxStore, listSandboxDocs)
 
@@ -28,7 +29,8 @@ sandboxPromptContext store = do
       , "Document routes: /sandbox/docs/{slug}"
       , "Storage: SQLite markdown documents"
       , "Documents: " <> docList docs
-      , "Capabilities: open_sandbox, open_sandbox_doc, create_sandbox_doc, save_sandbox_doc"
+      , entityOperationContext "displayed markdown documents" "/sandbox/docs/{slug}" "sandbox-document" ["open_sandbox", "open_sandbox_doc", "create_sandbox_doc", "save_sandbox_doc", "delete_sandbox_doc", "refresh_sandbox_doc"]
+      , "Capabilities: open_sandbox, open_sandbox_doc, create_sandbox_doc, save_sandbox_doc, delete_sandbox_doc, refresh_sandbox_doc"
       ]
 
 docList :: [SandboxDocSummary] -> String

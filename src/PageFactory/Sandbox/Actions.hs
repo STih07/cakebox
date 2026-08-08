@@ -7,13 +7,14 @@ module PageFactory.Sandbox.Actions
 
 -- Agent and screen capabilities for Sandbox documents.
 
-import Data.Aeson (FromJSON (..), Value, eitherDecode, object, withObject, (.:), (.:?), (.!=), (.=))
+import Data.Aeson (FromJSON (..), Value, eitherDecode, withObject, (.:), (.:?), (.!=), (.=))
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import Data.List (stripPrefix)
 import PageFactory.Ai.Provider.OpenAICompat (ToolCall (..))
 import PageFactory.Chat.Extension (ExtensionExecution (..), ToolSchema)
+import PageFactory.Chat.Operations (OperationArg (..), fragmentRenderedEvent, navigateEvent, operationToolSchema, stateUpdatedEvent)
 import PageFactory.Engine.Html (renderHtml)
-import PageFactory.Sandbox.Store (SandboxStore, getSandboxDoc, saveSandboxDoc)
+import PageFactory.Sandbox.Store (SandboxStore, deleteSandboxDoc, getSandboxDoc, saveSandboxDoc)
 import PageFactory.Sandbox.View (sandboxDocumentFragment)
 
 data SandboxDocArgs = SandboxDocArgs
@@ -47,6 +48,8 @@ sandboxToolSchemas =
   , openSandboxDocTool
   , createSandboxDocTool
   , saveSandboxDocTool
+  , deleteSandboxDocTool
+  , refreshSandboxDocTool
   ]
 
 executeSandboxTool :: SandboxStore -> ToolCall -> IO (Maybe ExtensionExecution)
@@ -59,6 +62,10 @@ executeSandboxTool store call
       Just <$> saveDoc True
   | toolCallName call == "save_sandbox_doc" =
       Just <$> saveDoc False
+  | toolCallName call == "delete_sandbox_doc" =
+      Just <$> deleteDoc
+  | toolCallName call == "refresh_sandbox_doc" =
+      Just <$> refreshDoc
   | otherwise =
       pure Nothing
   where
@@ -81,6 +88,28 @@ executeSandboxTool store call
                   let url = "/sandbox/docs/" <> sandboxOpenSlug args
                    in pureExecution ("OK: Opened Sandbox document " <> sandboxOpenSlug args) [navigateEvent url (sandboxOpenSlug args) ("OK: Opened Sandbox document " <> sandboxOpenSlug args)]
 
+    refreshDoc =
+      case parseOpenArgs (toolCallArguments call) of
+        Left err -> pureExecution ("ERROR: Bad refresh_sandbox_doc arguments: " <> err) []
+        Right args -> do
+          maybeDoc <- getSandboxDoc store (sandboxOpenSlug args)
+          case maybeDoc of
+            Nothing -> pureExecution ("ERROR: Sandbox document not found: " <> sandboxOpenSlug args) []
+            Just doc ->
+              let note = "OK: Refreshed Sandbox document " <> sandboxOpenSlug args
+               in pureExecution note [fragmentRenderedEvent "sandbox-document" (sandboxOpenSlug args) (renderHtml (sandboxDocumentFragment doc)), stateEvent note]
+
+    deleteDoc =
+      case parseOpenArgs (toolCallArguments call) of
+        Left err -> pureExecution ("ERROR: Bad delete_sandbox_doc arguments: " <> err) []
+        Right args -> do
+          result <- deleteSandboxDoc store (sandboxOpenSlug args)
+          case result of
+            Left message -> pureExecution ("ERROR: " <> message) []
+            Right slug ->
+              let note = "OK: Deleted Sandbox document " <> slug
+               in pureExecution note [navigateEvent "/sandbox" "Sandbox / Документы" note, stateEvent note]
+
     saveDoc shouldNavigate =
       case parseDocArgs (toolCallArguments call) of
         Left err -> pureExecution ("ERROR: Bad " <> toolCallName call <> " arguments: " <> err) []
@@ -91,13 +120,7 @@ executeSandboxTool store call
             Right doc ->
               let note = "OK: Saved Sandbox document " <> sandboxSlug args
                   fragmentEvent =
-                    ( "fragment.rendered"
-                    , object
-                        [ "target" .= ("sandbox-document" :: String)
-                        , "label" .= sandboxSlug args
-                        , "html" .= renderHtml (sandboxDocumentFragment doc)
-                        ]
-                    )
+                    fragmentRenderedEvent "sandbox-document" (sandboxSlug args) (renderHtml (sandboxDocumentFragment doc))
                   events =
                     if shouldNavigate
                       then [navigateEvent ("/sandbox/docs/" <> sandboxSlug args) (sandboxTitle args) note]
@@ -182,55 +205,17 @@ unescapeChar 'r' = '\r'
 unescapeChar 't' = '\t'
 unescapeChar char = char
 
-navigateEvent :: String -> String -> String -> (String, Value)
-navigateEvent url label note =
-  ( "ui.action"
-  , object
-      [ "action" .= ("navigate" :: String)
-      , "url" .= url
-      , "label" .= label
-      , "note" .= note
-      ]
-  )
-
 stateEvent :: String -> (String, Value)
 stateEvent note =
-  ( "state.updated"
-  , object
-      [ "currentModule" .= ("Sandbox" :: String)
-      , "note" .= note
-      ]
-  )
+  stateUpdatedEvent ["currentModule" .= ("Sandbox" :: String), "note" .= note]
 
 openSandboxTool :: ToolSchema
 openSandboxTool =
-  object
-    [ "type" .= ("function" :: String)
-    , "function"
-        .= object
-          [ "name" .= ("open_sandbox" :: String)
-          , "description" .= ("Open the Sandbox markdown document catalog." :: String)
-          , "parameters" .= object ["type" .= ("object" :: String), "properties" .= object [], "additionalProperties" .= False]
-          ]
-    ]
+  operationToolSchema "open_sandbox" "Open the Sandbox markdown document catalog." []
 
 openSandboxDocTool :: ToolSchema
 openSandboxDocTool =
-  object
-    [ "type" .= ("function" :: String)
-    , "function"
-        .= object
-          [ "name" .= ("open_sandbox_doc" :: String)
-          , "description" .= ("Open a Sandbox markdown document by slug." :: String)
-          , "parameters"
-              .= object
-                [ "type" .= ("object" :: String)
-                , "properties" .= object ["slug" .= object ["type" .= ("string" :: String)]]
-                , "required" .= (["slug"] :: [String])
-                , "additionalProperties" .= False
-                ]
-          ]
-    ]
+  operationToolSchema "open_sandbox_doc" "Open a displayed or stored Sandbox markdown document by slug." [slugArg]
 
 createSandboxDocTool :: ToolSchema
 createSandboxDocTool =
@@ -240,25 +225,18 @@ saveSandboxDocTool :: ToolSchema
 saveSandboxDocTool =
   docTool "save_sandbox_doc" "Save a Sandbox markdown document and re-render the visible document fragment."
 
+deleteSandboxDocTool :: ToolSchema
+deleteSandboxDocTool =
+  operationToolSchema "delete_sandbox_doc" "Delete a Sandbox markdown document by slug and navigate back to the document catalog." [slugArg]
+
+refreshSandboxDocTool :: ToolSchema
+refreshSandboxDocTool =
+  operationToolSchema "refresh_sandbox_doc" "Refresh the currently displayed Sandbox document fragment from SQLite storage." [slugArg]
+
 docTool :: String -> String -> ToolSchema
 docTool name description =
-  object
-    [ "type" .= ("function" :: String)
-    , "function"
-        .= object
-          [ "name" .= name
-          , "description" .= description
-          , "parameters"
-              .= object
-                [ "type" .= ("object" :: String)
-                , "properties"
-                    .= object
-                      [ "slug" .= object ["type" .= ("string" :: String)]
-                      , "title" .= object ["type" .= ("string" :: String)]
-                      , "body" .= object ["type" .= ("string" :: String)]
-                      ]
-                , "required" .= (["slug", "body"] :: [String])
-                , "additionalProperties" .= False
-                ]
-          ]
-    ]
+  operationToolSchema name description [slugArg, OperationArg "title" "Document title." False, OperationArg "body" "Markdown document body." True]
+
+slugArg :: OperationArg
+slugArg =
+  OperationArg "slug" "Sandbox document slug." True
