@@ -20,9 +20,8 @@ import PageFactory.Clients
   )
 import PageFactory.Engine.Html (renderHtml)
 import PageFactory.Engine (raw, tag, text)
-import PageFactory.Trading (tradingPanel)
-import PageFactory.Trading.DataSource (loadTickerQuotes)
-import PageFactory.Trading.State (TradingState, addTradingTicker, readTradingSymbols)
+import PageFactory.Trading.Actions (executeTradingTool)
+import PageFactory.Trading.State (TradingState)
 
 data ToolExecution = ToolExecution
   { toolExecutionResult :: ToolResult
@@ -53,11 +52,6 @@ data OrderArgs = OrderArgs
   }
   deriving (Eq, Show)
 
-data TradingTickerArgs = TradingTickerArgs
-  { tradingSymbol :: String
-  }
-  deriving (Eq, Show)
-
 parseFragmentArgs :: String -> Either String FragmentArgs
 parseFragmentArgs =
   eitherDecode . LBS.pack
@@ -68,10 +62,6 @@ parseThemeArgs =
 
 parseOrderArgs :: String -> Either String OrderArgs
 parseOrderArgs =
-  eitherDecode . LBS.pack
-
-parseTradingTickerArgs :: String -> Either String TradingTickerArgs
-parseTradingTickerArgs =
   eitherDecode . LBS.pack
 
 instance FromJSON FragmentArgs where
@@ -100,13 +90,20 @@ instance FromJSON OrderArgs where
         <*> value .:? "status"
         <*> value .:? "note"
 
-instance FromJSON TradingTickerArgs where
-  parseJSON =
-    withObject "TradingTickerArgs" $ \value ->
-      TradingTickerArgs <$> value .: "symbol"
-
 executeFragmentTool :: [Client] -> TradingState -> ToolCall -> IO ToolExecution
 executeFragmentTool clients tradingState call
+  | Just action <- executeTradingTool tradingState call = do
+      (content, events) <- action
+      pure
+        ToolExecution
+          { toolExecutionResult =
+              ToolResult
+                { toolResultCallId = toolCallId call
+                , toolResultName = toolCallName call
+                , toolResultContent = content
+                }
+          , toolExecutionEvents = events
+          }
   | toolCallName call == "open_client_page" =
       case parseFragmentArgs (toolCallArguments call) of
         Left err ->
@@ -135,18 +132,6 @@ executeFragmentTool clients tradingState call
       case parseOrderArgs (toolCallArguments call) of
         Left err -> pure (failed ("Bad update_order_draft arguments: " <> err))
         Right args -> pure (orderUpdated args)
-  | toolCallName call == "open_trading_tickers" =
-      pure openedTradingTickers
-  | toolCallName call == "refresh_trading_quotes" =
-      refreshTradingPanel "OK: Refreshed AI Trading tickers"
-  | toolCallName call == "add_trading_ticker" =
-      case parseTradingTickerArgs (toolCallArguments call) of
-        Left err -> pure (failed ("Bad add_trading_ticker arguments: " <> err))
-        Right args -> do
-          updateResult <- addTradingTicker tradingState (tradingSymbol args)
-          case updateResult of
-            Left message -> pure (failed message)
-            Right _ -> refreshTradingPanel ("OK: Added " <> tradingSymbol args <> " to AI Trading tickers")
   | otherwise =
       pure (failed ("Unknown tool: " <> toolCallName call))
   where
@@ -190,67 +175,6 @@ executeFragmentTool clients tradingState call
                   )
                 ]
             }
-
-    openedTradingTickers =
-      let finalNote = "OK: Opened AI Trading tickers"
-       in ToolExecution
-            { toolExecutionResult =
-                ToolResult
-                  { toolResultCallId = toolCallId call
-                  , toolResultName = toolCallName call
-                  , toolResultContent = finalNote
-                  }
-            , toolExecutionEvents =
-                [ ( "ui.action"
-                  , object
-                      [ "action" .= ("navigate" :: String)
-                      , "url" .= ("/ai-trading/tickers" :: String)
-                      , "label" .= ("AI Trading / Тикеры" :: String)
-                      , "note" .= finalNote
-                      ]
-                  )
-                , ( "state.updated"
-                  , object
-                      [ "currentModule" .= ("AI Trading" :: String)
-                      , "currentTab" .= ("Тикеры" :: String)
-                      , "note" .= finalNote
-                      ]
-                  )
-                ]
-            }
-
-    refreshTradingPanel finalNote = do
-      symbols <- readTradingSymbols tradingState
-      quotesResult <- loadTickerQuotes symbols
-      let html = renderHtml (tradingPanel quotesResult)
-          content =
-            case quotesResult of
-              Left message -> "ERROR: " <> message
-              Right _ -> finalNote
-      pure
-        ToolExecution
-          { toolExecutionResult =
-              ToolResult
-                { toolResultCallId = toolCallId call
-                , toolResultName = toolCallName call
-                , toolResultContent = content
-                }
-          , toolExecutionEvents =
-              [ ( "fragment.rendered"
-                , object
-                    [ "target" .= ("trading-panel" :: String)
-                    , "label" .= ("AI Trading / Тикеры" :: String)
-                    , "html" .= html
-                    ]
-                )
-              , ( "state.updated"
-                , object
-                    [ "tradingSymbols" .= symbols
-                    , "note" .= content
-                    ]
-                )
-              ]
-          }
 
     opened client tabName =
       let url = clientTabPath client tabName

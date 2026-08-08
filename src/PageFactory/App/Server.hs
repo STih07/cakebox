@@ -37,9 +37,9 @@ import PageFactory.Engine
   , text
   , writePage
   )
-import PageFactory.Trading (aiTradingView)
 import PageFactory.Trading.DataSource (loadTickerQuotes)
 import PageFactory.Trading.State (TradingState, newTradingState, readTradingSymbols)
+import PageFactory.Trading.View (aiTradingView)
 import System.Directory (createDirectoryIfMissing)
 import System.FilePath ((</>))
 

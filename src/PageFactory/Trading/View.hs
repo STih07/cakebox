@@ -1,9 +1,9 @@
-module PageFactory.Trading
+module PageFactory.Trading.View
   ( aiTradingView
   , tradingPanel
   ) where
 
--- AI Trading module. It starts with one tab: tickers.
+-- AI Trading views and fragment renderers.
 
 import PageFactory.Engine (Html, tag, text)
 import PageFactory.Trading.DataSource (TickerQuote (..))
@@ -19,7 +19,7 @@ aiTradingView quotesResult =
             <> tag "p" [] (text "Первый торговый модуль Cakebox: server-rendered watchlist, готовый для агентских actions, сигналов и будущих фрагментов рынка.")
         )
         <> tradingTabs
-        <> tickerPanel quotesResult
+        <> tradingPanel quotesResult
     )
 
 tradingTabs :: Html
@@ -28,10 +28,6 @@ tradingTabs =
     "nav"
     [("class", "tabs trading-tabs"), ("aria-label", "AI Trading tabs")]
     (tag "a" [("class", "tab active"), ("href", "/ai-trading/tickers")] (text "Тикеры"))
-
-tickerPanel :: Either String [TickerQuote] -> Html
-tickerPanel quotesResult =
-  tradingPanel quotesResult
 
 tradingPanel :: Either String [TickerQuote] -> Html
 tradingPanel quotesResult =
