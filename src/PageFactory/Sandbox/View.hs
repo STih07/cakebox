@@ -6,7 +6,8 @@ module PageFactory.Sandbox.View
 
 -- Sandbox document catalog and editor views.
 
-import Data.Char (toUpper)
+import Data.Char (isSpace, toUpper)
+import Data.List (stripPrefix)
 import PageFactory.Engine (Html, tag, text)
 import PageFactory.Sandbox.Store (SandboxDoc (..), SandboxDocSummary (..))
 
@@ -28,32 +29,37 @@ sandboxDocumentView :: SandboxDoc -> Html
 sandboxDocumentView doc =
   tag
     "main"
-    [("class", "shell"), ("data-render-part", "sandbox-document-page")]
-    ( tag "a" [("class", "back"), ("href", "/sandbox")] (text "← Документы")
-        <> sandboxDocumentFragment doc
-    )
+    [("class", "shell sandbox-doc-shell"), ("data-render-part", "sandbox-document-page")]
+    (sandboxDocumentFragment doc)
 
 sandboxDocumentFragment :: SandboxDoc -> Html
 sandboxDocumentFragment doc =
   tag
     "section"
-    [("class", "panel sandbox-document"), ("data-fragment-slot", "sandbox-document")]
+    [("class", "sandbox-document"), ("data-fragment-slot", "sandbox-document")]
     ( tag "form"
         [ ("class", "sandbox-editor")
         , ("data-extension-action-form", "save_sandbox_doc")
         ]
         ( tag "input" [("type", "hidden"), ("name", "slug"), ("value", docSlug doc)] mempty
-            <> tag "label" [] (text "Title")
-            <> tag "input" [("name", "title"), ("value", docTitle doc), ("autocomplete", "off")] mempty
-            <> tag "label" [] (text "Markdown")
-            <> tag "textarea" [("name", "body"), ("rows", "16")] (text (docBody doc))
-            <> tag "button" [("type", "submit")] (text "Save")
+            <> tag "header" [("class", "sandbox-doc-toolbar")]
+              ( tag "a" [("class", "back"), ("href", "/sandbox")] (text "← Документы")
+                  <> tag "input" [("class", "sandbox-title-input"), ("name", "title"), ("value", docTitle doc), ("autocomplete", "off"), ("aria-label", "Document title")] mempty
+                  <> tag "span" [("class", "sandbox-doc-updated")] (text ("Updated " <> shortDateTime (docUpdatedAt doc)))
+                  <> tag "button" [("type", "submit")] (text "Save")
+              )
+            <> tag "div" [("class", "sandbox-workspace")]
+              ( tag "div" [("class", "sandbox-page-wrap")]
+                  (tag "textarea" [("class", "sandbox-page"), ("name", "body"), ("rows", "30"), ("aria-label", "Markdown document body")] (text (docBody doc)))
+                  <> tag "aside" [("class", "sandbox-side-panel")]
+                    ( tag "div" [("class", "sandbox-side-card")]
+                        ( tag "span" [("class", "card-id")] (text (docSlug doc))
+                            <> tag "h2" [] (text (docDisplayTitle doc))
+                            <> renderMarkdown (docBody doc)
+                        )
+                    )
+              )
         )
-        <> tag "article" [("class", "sandbox-preview")]
-          ( tag "span" [("class", "sandbox-doc-updated")] (text ("Updated " <> shortDateTime (docUpdatedAt doc)))
-              <> tag "h2" [] (text (docDisplayTitle doc))
-              <> tag "pre" [] (text (docBody doc))
-          )
     )
 
 newDocumentForm :: Html
@@ -113,6 +119,53 @@ splitSlug raw =
 capitalize :: String -> String
 capitalize "" = ""
 capitalize (first : rest) = toUpper first : rest
+
+renderMarkdown :: String -> Html
+renderMarkdown body =
+  tag "div" [("class", "sandbox-rendered")] (renderLines (lines body))
+
+renderLines :: [String] -> Html
+renderLines [] = mempty
+renderLines (line : rest)
+  | isBlank line = renderLines rest
+  | Just heading <- stripPrefix "### " line =
+      tag "h4" [] (text heading) <> renderLines rest
+  | Just heading <- stripPrefix "## " line =
+      tag "h3" [] (text heading) <> renderLines rest
+  | Just heading <- stripPrefix "# " line =
+      tag "h2" [] (text heading) <> renderLines rest
+  | isBulletLine line =
+      let (items, more) = span isBulletLine (line : rest)
+       in tag "ul" [] (foldMap renderBullet items) <> renderLines more
+  | otherwise =
+      let (paragraph, more) = break startsBlock rest
+       in tag "p" [] (text (unwords (line : paragraph))) <> renderLines more
+
+renderBullet :: String -> Html
+renderBullet line =
+  tag "li" [] (text (drop 2 line))
+
+startsBlock :: String -> Bool
+startsBlock line =
+  isBlank line
+    || isBulletLine line
+    || hasPrefix "# " line
+    || hasPrefix "## " line
+    || hasPrefix "### " line
+
+isBulletLine :: String -> Bool
+isBulletLine =
+  hasPrefix "- "
+
+hasPrefix :: String -> String -> Bool
+hasPrefix prefix value =
+  case stripPrefix prefix value of
+    Just _ -> True
+    Nothing -> False
+
+isBlank :: String -> Bool
+isBlank =
+  all isSpace
 
 shortDateTime :: String -> String
 shortDateTime raw =
