@@ -39,6 +39,8 @@ import PageFactory.Engine
   , text
   , writePage
   )
+import PageFactory.ModelBuilder.Store (ModelStore, initModelStore, listModelConfigs)
+import PageFactory.ModelBuilder.View (modelBuilderView)
 import PageFactory.Sandbox.Store (SandboxStore, getSandboxDoc, initSandboxStore, listSandboxDocs)
 import PageFactory.Sandbox.View (sandboxCatalogView, sandboxDocumentView)
 import PageFactory.Stories.View (storyIndexView, storyView)
@@ -63,23 +65,23 @@ generateStatic = do
 
   putStrLn ("Generated " <> show (length clients + 1) <> " pages into " <> outputDir)
 
-app :: FilePath -> TraceStore -> ChatState -> TradingState -> SandboxStore -> Application
-app inputPath traceStore chatState tradingState sandboxStore req respond = do
+app :: FilePath -> TraceStore -> ChatState -> TradingState -> SandboxStore -> ModelStore -> Application
+app inputPath traceStore chatState tradingState sandboxStore modelStore req respond = do
   clients <- loadClients inputPath
-  response <- handleRequest traceStore chatState tradingState sandboxStore clients req
+  response <- handleRequest traceStore chatState tradingState sandboxStore modelStore clients req
   respond response
 
-handleRequest :: TraceStore -> ChatState -> TradingState -> SandboxStore -> [Client] -> Request -> IO Response
-handleRequest traceStore chatState tradingState sandboxStore clients req =
+handleRequest :: TraceStore -> ChatState -> TradingState -> SandboxStore -> ModelStore -> [Client] -> Request -> IO Response
+handleRequest traceStore chatState tradingState sandboxStore modelStore clients req =
   case parseRoute req of
     HealthRoute ->
       pure (plainResponse status200 "ok\n")
     FaviconRoute ->
       pure (plainResponse status204 "")
     AgUiRunRoute ->
-      agUiRunResponse traceStore chatState tradingState sandboxStore clients req
+      agUiRunResponse traceStore chatState tradingState sandboxStore modelStore clients req
     ExtensionActionRoute ->
-      extensionActionResponse tradingState sandboxStore req
+      extensionActionResponse tradingState sandboxStore modelStore req
     HomeRoute ->
       pure (htmlResponse status200 (renderFor mode "Фабрика клиентских страниц" (indexView clients)))
     AiTradingRoute -> do
@@ -93,6 +95,9 @@ handleRequest traceStore chatState tradingState sandboxStore clients req =
         Just symbol -> do
           quoteResult <- loadTickerQuotes [symbol]
           pure (htmlResponse status200 (renderFor mode ("AI Trading " <> symbol) (tickerDetailView symbol quoteResult)))
+    ModelsRoute -> do
+      models <- listModelConfigs modelStore
+      pure (htmlResponse status200 (renderFor mode "Model Builder" (modelBuilderView models)))
     SandboxRoute -> do
       docs <- listSandboxDocs sandboxStore
       pure (htmlResponse status200 (renderFor mode "Sandbox" (sandboxCatalogView docs)))
@@ -153,5 +158,6 @@ serve = do
   let storePath = "var/page-factory.sqlite3"
   traceStore <- initTraceStore storePath
   sandboxStore <- initSandboxStore storePath
+  modelStore <- initModelStore storePath
   putStrLn ("Page factory listening on http://" <> host <> ":" <> show port)
-  runSettings (setHost "127.0.0.1" (setPort port defaultSettings)) (app inputPath traceStore chatState tradingState sandboxStore)
+  runSettings (setHost "127.0.0.1" (setPort port defaultSettings)) (app inputPath traceStore chatState tradingState sandboxStore modelStore)

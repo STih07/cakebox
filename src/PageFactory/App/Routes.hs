@@ -17,6 +17,7 @@ data Route
   = HomeRoute
   | AiTradingRoute
   | AiTradingTickerRoute String
+  | ModelsRoute
   | SandboxRoute
   | SandboxDocumentRoute String
   | StoriesRoute
@@ -40,6 +41,7 @@ parseRoute req =
     ["ai-trading"] -> AiTradingRoute
     ["ai-trading", "tickers"] -> AiTradingRoute
     ["ai-trading", "tickers", rawSymbol] -> AiTradingTickerRoute (T.unpack rawSymbol)
+    ["models"] -> ModelsRoute
     ["sandbox"] -> SandboxRoute
     ["sandbox", "docs", rawSlug] -> SandboxDocumentRoute (T.unpack rawSlug)
     ["stories"] -> StoriesRoute

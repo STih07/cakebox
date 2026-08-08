@@ -27,6 +27,7 @@ This is not a React app with an AI chat bolted on. The server owns the routes, s
 - Browser navigation that swaps only the targeted layer.
 - Persistent left-side AI chat.
 - Shared entity operation helpers for tool schemas, navigation, state updates, and fragment refresh events.
+- A `Model Builder` tab where the user or agent can define configurable entity models with name, color, and short description.
 - AI tools for:
   - `set_theme_color`
   - `open_client_page`
@@ -170,6 +171,10 @@ Try these in the left chat rail:
 Открой Sandbox и создай markdown документ roadmap с коротким планом.
 ```
 
+```text
+Открой Model Builder и создай модель Idea с цветом #6f5d3f и коротким описанием.
+```
+
 What to watch:
 
 - the tool icon strip appears before assistant text;
@@ -179,6 +184,7 @@ What to watch:
 - screen controls in `trading-panel` call the same extension actions as the agent and apply the same `fragment.rendered` events;
 - ticker cards navigate to detail pages such as `/ai-trading/tickers/NVDA`;
 - `open_sandbox`, `create_sandbox_doc`, `open_sandbox_doc`, and `save_sandbox_doc` use the same action contract as the document forms in `/sandbox`;
+- `open_models`, `create_model`, `update_model`, `delete_model`, and `refresh_models` configure displayed entity models in `/models`;
 - traces land in `var/page-factory.sqlite3`.
 
 ## Module Map
@@ -191,6 +197,7 @@ src/PageFactory/
   Chat/       extension contract and enabled extension registry
   Clients/    demo domain model, CSV store, typed tabs, views
   Engine/     tiny HTML DSL, render modes, layout, CSS/JS assets
+  ModelBuilder/ SQLite model config store, views, and chat extension
   Sandbox/    SQLite markdown document store, views, and chat extension
   Trading/    Alpaca data source, backend watchlist state, views, and chat extension
 ```

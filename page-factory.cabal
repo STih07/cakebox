@@ -37,6 +37,10 @@ executable page-factory
     , PageFactory.Engine.Html
     , PageFactory.Engine.Http
     , PageFactory.Engine.Layout
+    , PageFactory.ModelBuilder.Actions
+    , PageFactory.ModelBuilder.Extension
+    , PageFactory.ModelBuilder.Store
+    , PageFactory.ModelBuilder.View
     , PageFactory.Sandbox.Actions
     , PageFactory.Sandbox.Extension
     , PageFactory.Sandbox.Store
