@@ -50,8 +50,8 @@ sandboxDocumentFragment doc =
             <> tag "button" [("type", "submit")] (text "Save")
         )
         <> tag "article" [("class", "sandbox-preview")]
-          ( tag "span" [("class", "card-id")] (text ("updated " <> docUpdatedAt doc))
-              <> tag "h2" [] (text (docTitle doc))
+          ( tag "span" [("class", "sandbox-doc-updated")] (text ("Updated " <> shortDateTime (docUpdatedAt doc)))
+              <> tag "h2" [] (text (docDisplayTitle doc))
               <> tag "pre" [] (text (docBody doc))
           )
     )
@@ -86,6 +86,14 @@ docCardTitle :: SandboxDocSummary -> String
 docCardTitle doc =
   let title = docSummaryTitle doc
       slug = docSummarySlug doc
+   in if title == "" || title == slug
+        then titleizeSlug slug
+        else title
+
+docDisplayTitle :: SandboxDoc -> String
+docDisplayTitle doc =
+  let title = docTitle doc
+      slug = docSlug doc
    in if title == "" || title == slug
         then titleizeSlug slug
         else title
