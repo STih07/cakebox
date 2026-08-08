@@ -6,6 +6,7 @@ module PageFactory.Sandbox.View
 
 -- Sandbox document catalog and editor views.
 
+import Data.Char (toUpper)
 import PageFactory.Engine (Html, tag, text)
 import PageFactory.Sandbox.Store (SandboxDoc (..), SandboxDocSummary (..))
 
@@ -73,7 +74,41 @@ docCard doc =
   tag
     "a"
     [("class", "sandbox-doc-card"), ("href", "/sandbox/docs/" <> docSummarySlug doc)]
-    ( tag "span" [("class", "card-id")] (text (docSummarySlug doc))
-        <> tag "strong" [] (text (docSummaryTitle doc))
-        <> tag "span" [] (text ("updated " <> docSummaryUpdatedAt doc))
+    ( tag "span" [("class", "sandbox-doc-meta")]
+        ( tag "span" [("class", "sandbox-doc-icon"), ("aria-hidden", "true")] (text "md")
+            <> tag "span" [("class", "card-id")] (text (docSummarySlug doc))
+        )
+        <> tag "strong" [] (text (docCardTitle doc))
+        <> tag "span" [("class", "sandbox-doc-updated")] (text ("Updated " <> shortDateTime (docSummaryUpdatedAt doc)))
     )
+
+docCardTitle :: SandboxDocSummary -> String
+docCardTitle doc =
+  let title = docSummaryTitle doc
+      slug = docSummarySlug doc
+   in if title == "" || title == slug
+        then titleizeSlug slug
+        else title
+
+titleizeSlug :: String -> String
+titleizeSlug slug =
+  unwords (map capitalize (splitSlug slug))
+
+splitSlug :: String -> [String]
+splitSlug raw =
+  case dropWhile (== '-') raw of
+    "" -> []
+    rest ->
+      let (part, more) = break (== '-') rest
+       in part : splitSlug more
+
+capitalize :: String -> String
+capitalize "" = ""
+capitalize (first : rest) = toUpper first : rest
+
+shortDateTime :: String -> String
+shortDateTime raw =
+  case words raw of
+    date : timePart : _ -> date <> " " <> take 5 timePart
+    date : _ -> date
+    [] -> raw
